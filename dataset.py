@@ -63,7 +63,7 @@ def process_trainjsonl(fname):
 
 
 class FeverDataset(Dataset):
-    def __init__(self, wiki_path=config['wiki_out'], train_path=config['train_data']):
+    def __init__(self, wiki_path=config['small_wiki'], train_path=config['train_data']):
         super().__init__()
         self.wiki = process_wiki(wiki_path)
         

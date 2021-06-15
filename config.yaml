@@ -2,9 +2,7 @@
 # input data:
 wiki_data: /tmp2/py/data/fever/wiki-pages
 train_data: /tmp2/py/data/fever/train.jsonl
-
-# output data:
-wiki_out: data/wiki.json
+small_wiki: data/small_wiki.json
 
 # device
 device_id: 0 # cpu: -1, gpu: >= 0
@@ -25,8 +23,3 @@ hidden_dim: 300
 n_cls_layers: 3
 dropout: 0.2
 freeze_bert: true
-
-# data processing
-max_document_len: 430
-max_question_len: 50
-max_choice_len: 32

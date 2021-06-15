@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     wiki = {doc: wikipages[doc] for doc in documents}
 
-    out_path = Path(config['wiki_out'])
+    out_path = Path(config['small_wiki'])
     out_path.parent.mkdir(parents=True, exist_ok=True)
     
     with open(out_path, 'w', encoding='utf8') as f:
