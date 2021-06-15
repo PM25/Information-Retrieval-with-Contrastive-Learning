@@ -1,0 +1,30 @@
+---
+# data:
+data_dir: /tmp2/py/data/fever
+fever_data: Train_qa_ans.json # data/SampleData_QA.json
+dev_fever_data: Develop_QA.json
+
+# device
+device_id: 0 # cpu: -1, gpu: >= 0
+
+# train
+seed: 1009
+epochs: 15
+batch_size: 16
+learning_rate: 0.0001
+warmup_steps: 20
+val_size: 0.1
+
+log_step: 1
+
+# model
+model: Roberta
+hidden_dim: 300
+n_cls_layers: 3
+dropout: 0.2
+freeze_bert: true
+
+# data processing
+max_document_len: 430
+max_question_len: 50
+max_choice_len: 32
