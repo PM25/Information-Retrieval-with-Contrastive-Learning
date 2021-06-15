@@ -1,8 +1,10 @@
 ---
-# data:
-data_dir: /tmp2/py/data/fever
-fever_data: Train_qa_ans.json # data/SampleData_QA.json
-dev_fever_data: Develop_QA.json
+# input data:
+wiki_data: /tmp2/py/data/fever/wiki-pages
+train_data: /tmp2/py/data/fever/train.jsonl
+
+# output data:
+wiki_out: data/wiki.json
 
 # device
 device_id: 0 # cpu: -1, gpu: >= 0
