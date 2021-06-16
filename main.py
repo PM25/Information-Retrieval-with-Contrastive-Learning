@@ -1,9 +1,25 @@
-#%%
+from parse import get_args
 import yaml
-from dataset import FeverDataset
+import random
+import os
+import numpy as np
+import torch
 
-with open("config.yaml", "r") as stream:
-    config = yaml.safe_load(stream)
 
-dataset = FeverDataset(config['small_wiki'], config['train_data'])
-print(dataset[1])
+def main():
+    # parse
+    args = get_args()
+
+    # set random seed
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
+    # load configure
+    config = yaml.load(open(args.config, 'r'), Loader=yaml.FullLoader)
+
+    from train import train
+    train(args, config)
+
+if __name__ == "__main__":
+    main()
