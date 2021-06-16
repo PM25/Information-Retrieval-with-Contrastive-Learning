@@ -10,18 +10,19 @@ ray.init()
 with open("config.yaml", "r") as stream:
     config = yaml.safe_load(stream)
 
+
 def load_wikipages():
-    wiki_path = Path(config['wiki_data'])
+    wiki_path = Path(config["data_dir"]) / "wiki-pages"
     fnames = list(wiki_path.glob("wiki-*.jsonl"))
-    
+
     wiki_data_dicts = [load_single_wikipages.remote(fname) for fname in fnames]
     for x in tqdm(to_iterator(wiki_data_dicts), total=len(wiki_data_dicts)):
         pass
-    
+
     data = {}
     for wiki_data_dict in tqdm(ray.get(wiki_data_dicts)):
         data.update(wiki_data_dict)
-    
+
     return data
 
 
@@ -35,9 +36,9 @@ def to_iterator(obj_ids):
 def load_single_wikipages(fname):
     with open(fname, "r", encoding="utf-8") as f:
         json_strs = f.readlines()
-        
+
     json_list = [json.loads(json_str) for json_str in json_strs]
-    
+
     return to_dict(json_list)
 
 
@@ -50,8 +51,10 @@ def to_dict(list_of_dict):
 
     return output
 
+
 def trainjsonl_documents():
-    with open(config['train_data'], "r", encoding="utf-8") as f:
+    fpath = Path(config["data_dir"]) / "train.jsonl"
+    with open(fpath, "r", encoding="utf-8") as f:
         json_strs = f.readlines()
 
     documents = set()
@@ -61,7 +64,7 @@ def trainjsonl_documents():
             for evidence in evidence_sets:
                 if evidence[2] is not None:
                     documents.add(evidence[2])
-    
+
     return documents
 
 
@@ -71,8 +74,8 @@ if __name__ == "__main__":
 
     wiki = {doc: wikipages[doc] for doc in documents}
 
-    out_path = Path(config['small_wiki'])
+    out_path = Path(config["small_wiki"])
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(out_path, 'w', encoding='utf8') as f:
+
+    with open(out_path, "w", encoding="utf8") as f:
         json.dump(wiki, f, indent=4, ensure_ascii=False)

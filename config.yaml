@@ -1,7 +1,5 @@
 ---
-# input data:
-wiki_data: /tmp2/py/data/fever/wiki-pages
-train_data: /tmp2/py/data/fever/train.jsonl
+data_dir: /tmp2/py/data/fever/
 small_wiki: data/small_wiki.json
 
 # device
