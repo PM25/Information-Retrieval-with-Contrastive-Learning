@@ -1,4 +1,5 @@
-# Fact-Verification-FEVER-Dataset
-a fact verification model based on FEVER Dataset
+# Using Contrastive Learning to retrieve relevent documents.
 
-FEVER Dataset: [fever.ai](https://fever.ai)
+### Dataset
+
+Fact-Verification-FEVER-Dataset(FEVER): [fever.ai](https://fever.ai)

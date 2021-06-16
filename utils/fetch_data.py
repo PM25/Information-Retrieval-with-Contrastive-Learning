@@ -4,7 +4,7 @@ from tqdm import tqdm
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
 
-with open("../config.yaml", "r") as stream:
+with open("config.yaml", "r") as stream:
     config = yaml.safe_load(stream)
 
 
