@@ -21,3 +21,4 @@ hidden_dim: 300
 n_cls_layers: 3
 dropout: 0.2
 freeze_bert: true
+

@@ -4,7 +4,7 @@ import yaml
 from tqdm import tqdm
 from pathlib import Path
 from unicodedata import normalize
-
+import torch
 from torch.utils.data import Dataset
 
 with open("config.yaml", "r") as stream:
@@ -61,6 +61,17 @@ def process_trainjsonl(fname):
         )
 
     return out
+
+class DummyDataset(Dataset):
+    def __init__(self):
+        super().__init__()
+        self.data = list(range(100000))
+        
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return torch.LongTensor([idx]), torch.rand(16, 768), torch.rand(56, 768)
 
 
 class FeverDataset(Dataset):
