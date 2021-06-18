@@ -4,18 +4,6 @@ from tqdm import tqdm
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
 
-with open("config.yaml", "r") as stream:
-    config = yaml.safe_load(stream)
-
-
-# links (from https://fever.ai/data.html)
-links = {
-    "Pre_processed_Wikipedia_Pages": "https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip",
-    "Training_Dataset": "https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl",
-    "Shared_Task_Development_Dataset_Labelled": "https://s3-eu-west-1.amazonaws.com/fever.public/shared_task_dev.jsonl",
-}
-
-
 def download_file(url, store_folder="data"):
     fname = Path(url).name
     stored_path = Path(store_folder) / fname
@@ -37,6 +25,16 @@ def download_file(url, store_folder="data"):
 
 
 if __name__ == "__main__":
+    with open("../config.yaml", "r") as stream:
+        config = yaml.safe_load(stream)
+        
+    # links (from https://fever.ai/data.html)
+    links = {
+        "Pre_processed_Wikipedia_Pages": "https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip",
+        "Training_Dataset": "https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl",
+        "Shared_Task_Development_Dataset_Labelled": "https://s3-eu-west-1.amazonaws.com/fever.public/shared_task_dev.jsonl",
+    }
+
     for name, url in links.items():
         fname = Path(url).name
         data_path = Path(config['dataset']["data_dir"]) / fname

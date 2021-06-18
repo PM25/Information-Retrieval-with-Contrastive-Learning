@@ -7,11 +7,7 @@ from unicodedata import normalize
 
 ray.init()
 
-with open("config.yaml", "r") as stream:
-    config = yaml.safe_load(stream)
-
-
-def load_wikipages():
+def load_wikipages(config):
     wiki_path = Path(config['dataset']["data_dir"]) / "wiki-pages"
     fnames = list(wiki_path.glob("wiki-*.jsonl"))
 
@@ -52,7 +48,7 @@ def to_dict(list_of_dict):
     return output
 
 
-def trainjsonl_documents():
+def trainjsonl_documents(config):
     fpath = Path(config['dataset']["data_dir"]) / "train.jsonl"
     with open(fpath, "r", encoding="utf-8") as f:
         json_strs = f.readlines()
@@ -69,8 +65,11 @@ def trainjsonl_documents():
 
 
 if __name__ == "__main__":
-    wikipages = load_wikipages()
-    documents = trainjsonl_documents()
+    with open("../config.yaml", "r") as stream:
+        config = yaml.safe_load(stream)
+        
+    wikipages = load_wikipages(config)
+    documents = trainjsonl_documents(config)
 
     wiki = {doc: wikipages[doc] for doc in documents}
 
