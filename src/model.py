@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from contrastor.contrastive_module import RetrievalModelWrapper
-from contrastor.contrastive_loss import NCELoss
+from src.contrastor.contrastive_module import RetrievalModelWrapper
+from src.contrastor.contrastive_loss import NCELoss
 
 class LSTM(nn.Module):
     def __init__(self, config, **kwargs):

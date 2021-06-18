@@ -3,7 +3,8 @@ import random
 import os
 import numpy as np
 import torch
-from train import train
+import argparse
+from src.train import train
 
 def get_args():
     # contruct parser object

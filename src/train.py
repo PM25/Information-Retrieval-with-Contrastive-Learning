@@ -1,8 +1,8 @@
 from torch.utils.tensorboard import SummaryWriter
-from model import build_model, save_model, load_model
-from dataset import get_dataloader
-from contrastor.utils import run_kmeans, run_hierarchical_clustering
-from evaluation import evaluate
+from src.model import build_model, save_model, load_model
+from src.dataset import get_dataloader
+from src.contrastor.utils import run_kmeans, run_hierarchical_clustering
+from src.evaluation import evaluate
 from tqdm import tqdm
 
 import numpy as np
@@ -55,7 +55,7 @@ def train(args):
 
     # set initialization
     if args.ckpt is None:
-        model = build_model(args, args.config)
+        model = build_model(args)
         optimizer = get_optimizer(args, model)
         init_step = 0
     else:
