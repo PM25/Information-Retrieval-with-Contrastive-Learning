@@ -12,7 +12,7 @@ with open("config.yaml", "r") as stream:
 
 
 def load_wikipages():
-    wiki_path = Path(config["data_dir"]) / "wiki-pages"
+    wiki_path = Path(config['dataset']["data_dir"]) / "wiki-pages"
     fnames = list(wiki_path.glob("wiki-*.jsonl"))
 
     wiki_data_dicts = [load_single_wikipages.remote(fname) for fname in fnames]
@@ -53,7 +53,7 @@ def to_dict(list_of_dict):
 
 
 def trainjsonl_documents():
-    fpath = Path(config["data_dir"]) / "train.jsonl"
+    fpath = Path(config['dataset']["data_dir"]) / "train.jsonl"
     with open(fpath, "r", encoding="utf-8") as f:
         json_strs = f.readlines()
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     wiki = {doc: wikipages[doc] for doc in documents}
 
-    out_path = Path(config["small_wiki"])
+    out_path = Path(config['dataset']["small_wiki"])
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(out_path, "w", encoding="utf8") as f:
