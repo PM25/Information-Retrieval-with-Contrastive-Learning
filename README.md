@@ -6,4 +6,4 @@ Fact-Verification-FEVER-Dataset(FEVER): [fever.ai](https://fever.ai)
 
 ### Execution:
 
-PYTHONPATH=src python main.py --help
+`PYTHONPATH=src python main.py --help`
