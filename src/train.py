@@ -90,7 +90,7 @@ def train(args):
     loss_record = []
     loss_sum = 0
     step_sum = init_step
-    total_steps = config['train']['total_steps']
+    total_steps = args.config['train']['total_steps']
 
     print(f'[Runner] - Start training')
     pbar = tqdm(initial=init_step, total=total_steps, dynamic_ncols=True)
@@ -100,24 +100,24 @@ def train(args):
 
         # scheduler process
         if args.opt == 'sgd':
-            adjust_learning_rate(optimizer, step_sum, config)
+            adjust_learning_rate(optimizer, step_sum, args.config)
 
         for batch in train_loader:
             try:
                 # extract all noise embeddings
                 if args.loss == 'ProtoNCE' and batch_size == 0 \
-                        and step_sum >= config['loss']['ProtoNCE']['cluster_start_steps'] \
-                        and step_sum % config['loss']['ProtoNCE']['cluster']['update_steps'] == 0:
+                        and step_sum >= args.config['loss']['ProtoNCE']['cluster_start_steps'] \
+                        and step_sum % args.config['loss']['ProtoNCE']['cluster']['update_steps'] == 0:
                     cluster_result = run_kmeans(
-                        config['loss']['ProtoNCE'], feat_loader, model, device)
+                        args.config['loss']['ProtoNCE'], feat_loader, model, device)
                 if args.loss == 'HProtoNCE' and batch_size == 0 \
-                        and step_sum >= config['loss']['HProtoNCE']['cluster_start_steps'] \
-                        and step_sum % config['loss']['HProtoNCE']['cluster']['update_steps'] == 0:
+                        and step_sum >= args.config['loss']['HProtoNCE']['cluster_start_steps'] \
+                        and step_sum % args.config['loss']['HProtoNCE']['cluster']['update_steps'] == 0:
                     cluster_result = run_hierarchical_clustering(
-                        config['loss']['HProtoNCE'], feat_loader, model, device)
+                        args.config['loss']['HProtoNCE'], feat_loader, model, device)
 
                 # start using queue
-                if model.use_queue and step_sum >= config['loss'][args.loss]['queue_start_steps'] and not model.add_queue_to_loss:
+                if model.use_queue and step_sum >= args.config['loss'][args.loss]['queue_start_steps'] and not model.add_queue_to_loss:
                     model.add_queue_to_loss = True
 
                 # load data
@@ -132,12 +132,12 @@ def train(args):
                 loss_sum += loss.item()
 
            
-                if batch_size == acml_batch_size or len(indexes) != config['train']['batch_size']:
+                if batch_size == acml_batch_size or len(indexes) != args.config['train']['batch_size']:
                     # gradient clipping
                     if args.model == 'LSTM':
                         down_paras = list(model.parameters())
                         grad_norm = torch.nn.utils.clip_grad_norm_(
-                            down_paras, config['optimizer']['gradient_clipping'])
+                            down_paras, args.config['optimizer']['gradient_clipping'])
                         # update parameters
                         if math.isnan(grad_norm) or math.isinf(grad_norm):
                             print(
@@ -155,20 +155,20 @@ def train(args):
                     loss_sum = 0
 
                 # log training recording
-                if (step_sum != init_step and step_sum % int(config['train']['log_step']) == 0) and batch_size == 0:
+                if (step_sum != init_step and step_sum % int(args.config['train']['log_step']) == 0) and batch_size == 0:
                     loss_avg = np.mean(loss_record)
                     loss_record = []
                     log.add_scalar('train_loss', loss_avg, step_sum)
                     log.add_scalar('grad_norm', grad_norm, step_sum)
 
                 # evaluate and save the best
-                if (step_sum != init_step and step_sum % int(config['train']['eval_step']) == 0) and batch_size == 0:
+                if (step_sum != init_step and step_sum % int(args.config['train']['eval_step']) == 0) and batch_size == 0:
                     print(f'[Runner] - Evaluating on development set')
-                    loss = evaluate(args, config, dev_loader, model)
+                    loss = evaluate(args, args.config, dev_loader, model)
                     log.add_scalar('dev_loss', loss, step_sum)
                     pbar.set_description(
                         'Train_Loss %.5f | Valid_Loss %.5f' % (loss_avg, loss))
-                    save_model(model, optimizer, args, config, step_sum)
+                    save_model(model, optimizer, args, args.config, step_sum)
 
             except RuntimeError as e:
                 if not 'CUDA out of memory' in str(e):
