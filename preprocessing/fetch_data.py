@@ -39,12 +39,12 @@ def download_file(url, store_folder="data"):
 if __name__ == "__main__":
     for name, url in links.items():
         fname = Path(url).name
-        data_path = Path(config["data_dir"]) / fname
+        data_path = Path(config['dataset']["data_dir"]) / fname
 
         if data_path.is_file():
             print(f"*skip download file '{name}': already exists in {data_path}")
         else:
-            download_file(url, config["data_dir"])
+            download_file(url, config['dataset']["data_dir"])
 
         # if it's a zip file then unzip it
         if is_zipfile(data_path):
@@ -53,4 +53,4 @@ if __name__ == "__main__":
                 for file in tqdm(
                     iterable=zfile.namelist(), total=len(zfile.namelist())
                 ):
-                    zfile.extract(member=file, path=Path(config["data_dir"]))
+                    zfile.extract(member=file, path=Path(config['dataset']["data_dir"]))
