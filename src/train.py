@@ -1,5 +1,6 @@
 from torch.utils.tensorboard import SummaryWriter
-from utils_ import build_model, get_optimizer, save_model, load_model, optimizer_to, get_dataloader
+from model import build_model, save_model, load_model
+from dataset import get_dataloader
 from contrastor.utils import run_kmeans, run_hierarchical_clustering
 from evaluation import evaluate
 from tqdm import tqdm
@@ -21,18 +22,42 @@ def adjust_learning_rate(optimizer, steps, config):
                                config['train']['total_steps']))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+        
+def get_optimizer(args, model):
+    if args.opt == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=float(args.config['optimizer']['SGD']['learning_rate']),
+                                    momentum=float(args.config['optimizer']['SGD']['momentum']),
+                                    weight_decay=float(args.config['optimizer']['SGD']['weight_decay']))
+    elif args.opt == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=float(args.config['optimizer']['Adam']['learning_rate']),
+                                     betas=tuple(args.config['optimizer']['Adam']['betas']))
+    return optimizer
 
+def optimizer_to(optim, device):
+    for param in optim.state.values():
+        # Not sure there are any global tensors in the state dict
+        if isinstance(param, torch.Tensor):
+            param.data = param.data.to(device)
+            if param._grad is not None:
+                param._grad.data = param._grad.data.to(device)
+        elif isinstance(param, dict):
+            for subparam in param.values():
+                if isinstance(subparam, torch.Tensor):
+                    subparam.data = subparam.data.to(device)
+                    if subparam._grad is not None:
+                        subparam._grad.data = subparam._grad.data.to(device)
 
-def train(args, config):
+def train(args):
     # set cuda device
-    torch.cuda.set_device(args.gpu)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu') if args.gpu < 0 else torch.device('cuda:%d' % (args.gpu))
 
     # set initialization
-    init_step = 0
     if args.ckpt is None:
-        model = build_model(args, config)
-        optimizer = get_optimizer(args, config, model)
+        model = build_model(args, args.config)
+        optimizer = get_optimizer(args, model)
+        init_step = 0
     else:
         _, _, model, optimizer, init_step = load_model(args.ckpt)
         
@@ -40,15 +65,15 @@ def train(args, config):
     optimizer_to(optimizer, device)
 
     # set batch size
-    assert config['train']['acml_batch_size'] % config['train']['batch_size'] == 0
+    assert args.config['train']['acml_batch_size'] % args.config['train']['batch_size'] == 0
     batch_size = 0
-    acml_batch_size = config['train']['acml_batch_size']
+    acml_batch_size = args.config['train']['acml_batch_size']
     
     # todo
-    train_loader = get_dataloader(config, args, train=True)
-    dev_loader = get_dataloader(config, args, train=False)
+    train_loader = get_dataloader(args, train=True)
+    dev_loader = get_dataloader(args, train=False)
     if args.loss in ['ProtoNCE', 'HProtoNCE']:
-        feat_loader = get_dataloader(config, args, train=False)
+        feat_loader = get_dataloader(args, train=False)
     cluster_result = None
 
     # build logger directory

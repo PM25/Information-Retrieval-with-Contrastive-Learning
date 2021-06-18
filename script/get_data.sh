@@ -1,2 +1,2 @@
-python utils/fetch_data.py
-python utils/extract_wiki.py
+python preprocessing/fetch_data.py
+python preprocessing/extract_wiki.py

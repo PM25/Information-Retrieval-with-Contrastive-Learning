@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-
+from contrastor.contrastive_module import RetrievalModelWrapper
+from contrastor.contrastive_loss import NCELoss
 
 class LSTM(nn.Module):
     def __init__(self, config, **kwargs):
@@ -33,3 +34,42 @@ class LSTM(nn.Module):
         predicted, _ = self.lstm(features)
         predicted = self.scaling_layer(predicted)
         return predicted
+    
+def build_model(args):
+    print(f'[Runner] - Building contrastive model')
+    loss_config = args.config['loss'][f'{args.loss}']
+    loss_config['dim'] = args.config['model']['LSTM']['output_size']
+
+    if args.loss in ['InfoNCE', 'ProtoNCE', 'HProtoNCE']:
+        criterion = NCELoss(loss_config)
+
+    bk_model = eval(args.model)(args.config)
+    use_LSTM = isinstance(bk_model, LSTM)
+
+    model = RetrievalModelWrapper(
+        bk_model, criterion, loss_config, use_LSTM=use_LSTM)
+    return model
+
+def save_model(model, optimizer, args, current_step):
+    path = f'{args.ckptdir}/{args.loss}_{args.model}_{current_step}.pth'
+    all_states = {
+        'Model': model.state_dict(),
+        'Optimizer': optimizer.state_dict(),
+        'Current_step': current_step,
+        'Args': args
+    }
+    torch.save(all_states, path)
+
+def load_model(path):
+    ckpt = torch.load(path, map_location='cpu')
+    args = ckpt['Args']
+
+    model = build_model(args)
+    print(f'[Runner] - Loading model parameters')
+    model.load_state_dict(ckpt['Model'])
+
+    optimizer = get_optimizer(args, model)
+    optimizer.load_state_dict(ckpt['Optimizer'])
+
+    current_step = ckpt['Current_step']
+    return args, model, optimizer, current_step

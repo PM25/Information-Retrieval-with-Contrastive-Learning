@@ -7,10 +7,6 @@ from unicodedata import normalize
 import torch
 from torch.utils.data import Dataset
 
-with open("config.yaml", "r") as stream:
-    config = yaml.safe_load(stream)
-
-
 def process_wiki(fname):
     with open(fname, "r") as f:
         wiki = json.load(f)
@@ -73,9 +69,8 @@ class DummyDataset(Dataset):
     def __getitem__(self, idx):
         return torch.LongTensor([idx]), torch.rand(16, 768), torch.rand(56, 768)
 
-
 class FeverDataset(Dataset):
-    def __init__(self, wiki_path=config["small_wiki"], data_path=config["data_dir"]):
+    def __init__(self, wiki_path, data_path):
         super().__init__()
         self.wiki = process_wiki(wiki_path)
 
@@ -123,8 +118,18 @@ class FeverDataset(Dataset):
             datum["evidences"] = process_evidences
 
         return data
+    
+def get_dataloader(args, train=True):
+    bsz = args.config['train']['batch_size'] if train else args.config['eval']['batch_size']
+    n_jobs = args.config['train']['n_jobs'] if train else args.config['eval']['n_jobs']
 
+    dataset = DummyDataset()
 
-if __name__ == "__main__":
-    dataset = FeverDataset()
-    print(dataset[0])
+    return torch.utils.data.DataLoader(
+        dataset,
+        batch_size=bsz,
+        shuffle=train,
+        num_workers=n_jobs,
+        drop_last=train
+        # collate_fn=dataset.collate_fn
+    )
