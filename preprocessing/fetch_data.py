@@ -25,7 +25,7 @@ def download_file(url, store_folder="data"):
 
 
 if __name__ == "__main__":
-    with open("../config.yaml", "r") as stream:
+    with open("config.yaml", "r") as stream:
         config = yaml.safe_load(stream)
         
     # links (from https://fever.ai/data.html)

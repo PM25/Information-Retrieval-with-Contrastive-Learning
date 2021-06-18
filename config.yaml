@@ -76,5 +76,5 @@ eval:
   n_jobs: 3
   
 dataset:
-  data_dir: /tmp2/py/data/fever/
+  data_dir: data/fever/
   small_wiki: data/small_wiki.json
