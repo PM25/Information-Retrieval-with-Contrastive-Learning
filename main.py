@@ -36,7 +36,7 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def main():
+if __name__ == "__main__":
     # parse
     args = get_args()
 
@@ -51,6 +51,3 @@ def main():
     # load configure
     args.config = yaml.load(open(args.config, 'r'), Loader=yaml.FullLoader)
     train(args)
-
-if __name__ == "__main__":
-    main()
