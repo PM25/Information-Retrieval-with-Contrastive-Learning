@@ -10,15 +10,24 @@ def sub(m):
 def extract_docs_sentence(dic):
     docs = []
     for doc_string in dic.values():
+        # get the number of sentences in the document
         length = int(doc_string['lines'][-3:].strip())
+
+        # remove the above redundancy words
         lines = re.sub(r'[^ ]+', sub, doc_string['lines'])
 
         doc = []
         for i in range(length):
+
+            # get the start position of the sentence
             s = lines[lines.find('%d\t' % (i)):]
+
+            # get the end position of the sentence (rule: the end of the sentence should be 1). ".\t", 2). ".\n", 3). "(i+1)\t"
             end_pos = min([e for e in [s.find(x) for x in ['.\t', '.\n', '%d\t' % (i+1)]] if e > 0])
 
             s = s[len(str(i)):end_pos].strip()+'.'
+
+            # if len(s) == 1: empty string
             if len(s) == 1:
                 continue
             doc.append(s)
