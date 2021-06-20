@@ -7,8 +7,6 @@ import argparse
 from src.train import train
 import _pickle as pk
 from src.dataset import get_dataloader
-from transformers import BertTokenizer, BertModel, AutoTokenizer
-from src.train import bert_extractor
 
 import time
 
@@ -60,12 +58,6 @@ if __name__ == "__main__":
     # run `bash script/get_data.sh` to get the file
     with open(args.config['dataset']['docs_sentence'], 'rb') as f:
         data = pk.load(f)
-        
-    # build a bert tokenizer and a bert model
-    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', use_fast=True)
-    bert_model = BertModel.from_pretrained('bert-base-uncased')
-    bert_model = bert_model.cuda()
-    bert_model.eval()
-
+          
     # start training
-    train(data, bert_model, bert_tokenizer, args)
+    train(data, args)
