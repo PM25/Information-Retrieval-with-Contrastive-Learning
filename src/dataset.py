@@ -1,12 +1,13 @@
 #%%
 import json
-import yaml
 from tqdm import tqdm
 from pathlib import Path
 from unicodedata import normalize
 import torch
 from torch.utils.data import Dataset
 import numpy as np
+import random
+random.seed(1126)
 
 def process_wiki(fname):
     with open(fname, "r") as f:

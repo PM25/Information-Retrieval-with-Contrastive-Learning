@@ -1,6 +1,7 @@
 import torch
 from random import sample
-
+import random
+random.seed(1126)
 
 class CrossEntropy(torch.nn.Module):
     def __init__(self, use_hard_label=True):
