@@ -35,6 +35,20 @@ class LSTM(nn.Module):
         predicted = self.scaling_layer(predicted)
         return predicted
     
+
+def get_optimizer(args, model):
+    if args.opt == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=float(args.config['optimizer']['SGD']['learning_rate']),
+                                    momentum=float(args.config['optimizer']['SGD']['momentum']),
+                                    weight_decay=float(args.config['optimizer']['SGD']['weight_decay']))
+    elif args.opt == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=float(args.config['optimizer']['Adam']['learning_rate']),
+                                     betas=tuple(args.config['optimizer']['Adam']['betas']))
+    return optimizer
+
+
 def build_model(args):
     print(f'[Runner] - Building contrastive model')
     loss_config = args.config['loss'][f'{args.loss}']
@@ -50,6 +64,7 @@ def build_model(args):
         bk_model, criterion, loss_config, use_LSTM=use_LSTM)
     return model
 
+
 def save_model(model, optimizer, args, current_step):
     path = f'{args.ckptdir}/{args.loss}_{args.model}_{current_step}.pth'
     all_states = {
@@ -59,6 +74,7 @@ def save_model(model, optimizer, args, current_step):
         'Args': args
     }
     torch.save(all_states, path)
+
 
 def load_model(path):
     ckpt = torch.load(path, map_location='cpu')

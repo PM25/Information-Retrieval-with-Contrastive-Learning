@@ -63,7 +63,7 @@ class DocDataset(Dataset):
     def __init__(self, data):
         super().__init__()
         self.data = data
-        
+    
     def __len__(self):
         return len(self.data)
 

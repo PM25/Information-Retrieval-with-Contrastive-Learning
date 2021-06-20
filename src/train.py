@@ -1,5 +1,5 @@
 from torch.utils.tensorboard import SummaryWriter
-from src.model import build_model, save_model, load_model
+from src.model import build_model, save_model, load_model, get_optimizer
 from src.dataset import get_dataloader
 from src.contrastor.utils import run_kmeans, run_hierarchical_clustering
 from src.evaluation import evaluate
@@ -23,17 +23,6 @@ def adjust_learning_rate(optimizer, steps, config):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
         
-def get_optimizer(args, model):
-    if args.opt == 'sgd':
-        optimizer = torch.optim.SGD(model.parameters(),
-                                    lr=float(args.config['optimizer']['SGD']['learning_rate']),
-                                    momentum=float(args.config['optimizer']['SGD']['momentum']),
-                                    weight_decay=float(args.config['optimizer']['SGD']['weight_decay']))
-    elif args.opt == 'adam':
-        optimizer = torch.optim.Adam(model.parameters(),
-                                     lr=float(args.config['optimizer']['Adam']['learning_rate']),
-                                     betas=tuple(args.config['optimizer']['Adam']['betas']))
-    return optimizer
 
 def optimizer_to(optim, device):
     for param in optim.state.values():
@@ -49,22 +38,15 @@ def optimizer_to(optim, device):
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
                         
-def bert_extractor(d1, d2, tokenizer, model, args):
-    with torch.no_grad():
-        t = tokenizer(d1+d2, padding=True, truncation=True, return_tensors='pt')
-        t = {k: v.to(args.device) for k, v in t.items()}
-        output = model(**t)
-    output = output.last_hidden_state
-    return output[:len(d1)], output[len(d1):]
 
-def train(data, bert_model, bert_tokenizer, args):
+def train(data, args):
     # set initialization
     if args.ckpt is None:
         model = build_model(args)
         optimizer = get_optimizer(args, model)
         init_step = 0
     else:
-        _, _, model, optimizer, init_step = load_model(args.ckpt)
+        _, model, optimizer, init_step = load_model(args.ckpt)
         
     model = model.to(args.device)
     optimizer_to(optimizer, args.device)
@@ -76,7 +58,6 @@ def train(data, bert_model, bert_tokenizer, args):
     
     # todo
     train_loader = get_dataloader(data, args, train=True)
-    dev_loader = get_dataloader(data, args, train=False)
     if args.loss in ['ProtoNCE', 'HProtoNCE']:
         feat_loader = get_dataloader(data, args, train=False)
     cluster_result = None
@@ -127,16 +108,14 @@ def train(data, bert_model, bert_tokenizer, args):
 
                 # load data
                 indexes, anchor_sample, positive_sample = batch
-                anchor_sample, positive_sample = bert_extractor(anchor_sample, positive_sample, bert_tokenizer, bert_model, args)
                 batch_size += len(indexes)
 
                 # process forward and backward
-                loss = model(anchor_sample, positive_sample, cluster_result,
+                loss = model(anchor_sample, positive_sample, args.device, cluster_result,
                                 indexes) / acml_batch_size
                 loss.backward()
                 loss_sum += loss.item()
-
-           
+              
                 if batch_size == acml_batch_size or len(indexes) != args.config['train']['batch_size']:
                     # gradient clipping
                     if args.model == 'LSTM':
@@ -165,15 +144,11 @@ def train(data, bert_model, bert_tokenizer, args):
                     loss_record = []
                     log.add_scalar('train_loss', loss_avg, step_sum)
                     log.add_scalar('grad_norm', grad_norm, step_sum)
-
-                # evaluate and save the best
-                if (step_sum != init_step and step_sum % int(args.config['train']['eval_step']) == 0) and batch_size == 0:
-                    print(f'[Runner] - Evaluating on development set')
-                    loss = evaluate(args, args.config, dev_loader, model)
-                    log.add_scalar('dev_loss', loss, step_sum)
                     pbar.set_description(
-                        'Train_Loss %.5f | Valid_Loss %.5f' % (loss_avg, loss))
-                    save_model(model, optimizer, args, args.config, step_sum)
+                        'Train_Loss %.5f' % (loss_avg))
+                    print('Train_Loss %.5f' % (loss_avg))
+                    save_model(model, optimizer, args, step_sum)
+
 
             except RuntimeError as e:
                 if not 'CUDA out of memory' in str(e):
