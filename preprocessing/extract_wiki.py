@@ -12,6 +12,7 @@ def load_wikipages(config):
     wiki_path = Path(config["dataset"]["data_dir"]) / "wiki-pages"
     fnames = list(wiki_path.glob("wiki-*.jsonl"))
 
+    print("[Loading wiki data]")
     wiki_data_dicts = [load_single_wikipages.remote(fname) for fname in fnames]
     for x in tqdm(to_iterator(wiki_data_dicts), total=len(wiki_data_dicts)):
         pass

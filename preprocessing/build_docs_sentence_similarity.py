@@ -36,14 +36,14 @@ class LemmaTokenizer:
         return tokens
 
 
-def get_docs_sents_similarity(data):
+def get_docs_sents_similarity(full_data, small_data):
     print("[Building Sentences TF-IDF]")
     vectorizer = TfidfVectorizer(tokenizer=LemmaTokenizer(), ngram_range=(1, 2))
-    corpus = [sent for doc in data for sent in doc]
+    corpus = [sent for doc in full_data for sent in doc]
     vectorizer.fit(corpus)
 
     docs_sents_similarity = []
-    for doc in tqdm(data):
+    for doc in tqdm(small_data):
         doc_tfidf = vectorizer.transform(doc)
         similarity = cosine_similarity(doc_tfidf, doc_tfidf)
 
@@ -71,9 +71,12 @@ if __name__ == "__main__":
         config = yaml.safe_load(stream)
 
     with open(config["dataset"]["full_docs_sentence"], "rb") as f:
-        data = pk.load(f)
+        full_data = pk.load(f)
 
+    with open(config["dataset"]["docs_sentence"], "rb") as f:
+        small_data = pk.load(f)
+
+    docs_sents_similarity = get_docs_sents_similarity(full_data, small_data)
     print("[Saving full documents sentences similarity]")
-    docs_sents_similarity = get_docs_sents_similarity(data)
     with open(config["dataset"]["full_docs_sentence_similarity"], "wb") as f:
         pk.dump(docs_sents_similarity, f)

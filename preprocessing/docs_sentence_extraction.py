@@ -23,7 +23,10 @@ def extract_docs_sentence(dic):
         length = doc_string["lines"][-3:].strip()
         if not length.isdigit():
             continue
+
         length = int(length)
+        if length <= 2:
+            continue
 
         # remove the above redundancy words
         lines = re.sub(r"[^ ]+", sub, doc_string["lines"])
@@ -49,9 +52,6 @@ def extract_docs_sentence(dic):
             if len(s) == 1:
                 continue
             doc.append(s)
-
-        if len(doc) > 2:
-            docs.append(doc)
 
     return docs
 
