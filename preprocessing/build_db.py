@@ -13,17 +13,21 @@ LogHelper.setup()
 logger = LogHelper.get_logger("DrQA BuildDB")
 
 PREPROCESS_FN = None
+
+
 def init(filename):
     global PREPROCESS_FN
     if filename:
         PREPROCESS_FN = import_module(filename).preprocess
 
+
 def import_module(filename):
     """Import a module given a full path to the file."""
-    spec = importlib.util.spec_from_file_location('doc_filter', filename)
+    spec = importlib.util.spec_from_file_location("doc_filter", filename)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
 
 def iter_files(path):
     """Walk through all files located under a root path."""
@@ -34,7 +38,8 @@ def iter_files(path):
             for f in filenames:
                 yield os.path.join(dirpath, f)
     else:
-        raise RuntimeError('Path %s is invalid' % path)
+        raise RuntimeError("Path %s is invalid" % path)
+
 
 def get_contents(filename):
     """Parse the contents of a file. Each line is a JSON encoded document."""
@@ -51,8 +56,9 @@ def get_contents(filename):
             if not doc:
                 continue
             # Add the document
-            documents.append((utils.normalize(doc['id']), doc['text'], doc['lines']))
+            documents.append((utils.normalize(doc["id"]), doc["text"], doc["lines"]))
     return documents
+
 
 def store_contents(data_path, save_path, num_workers=None):
     """Preprocess and store a corpus of documents in sqlite.
@@ -65,9 +71,9 @@ def store_contents(data_path, save_path, num_workers=None):
         num_workers: Number of parallel processes to use when reading docs.
     """
     if os.path.isfile(save_path):
-        raise RuntimeError('%s already exists! Not overwriting.' % save_path)
+        raise RuntimeError("%s already exists! Not overwriting." % save_path)
 
-    logger.info('Reading into database...')
+    logger.info("Reading into database...")
     conn = sqlite3.connect(save_path)
     c = conn.cursor()
     c.execute("CREATE TABLE documents (id PRIMARY KEY, text, lines);")
@@ -80,16 +86,21 @@ def store_contents(data_path, save_path, num_workers=None):
             count += len(pairs)
             c.executemany("INSERT INTO documents VALUES (?,?,?)", pairs)
             pbar.update()
-    logger.info('Read %d docs.' % count)
-    logger.info('Committing...')
+    logger.info("Read %d docs." % count)
+    logger.info("Committing...")
     conn.commit()
     conn.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-dp', '--data_path', type=str, default='/tmp2/chu/IR/data/wiki-pages')
-    parser.add_argument('-sp', '--save_path', type=str, default='./data/database/fever.db')
-    parser.add_argument('-n', '--num-workers', type=int, default=None)
+    parser.add_argument(
+        "-dp", "--data_path", type=str, default="/tmp2/chu/IR/data/wiki-pages"
+    )
+    parser.add_argument(
+        "-sp", "--save_path", type=str, default="./data/database/fever.db"
+    )
+    parser.add_argument("-n", "--num-workers", type=int, default=None)
     args = parser.parse_args()
 
     store_contents(args.data_path, args.save_path, args.num_workers)

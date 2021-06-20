@@ -1,12 +1,30 @@
-#%%
 import json
 import yaml
+import string
+import random
+import warnings
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from unicodedata import normalize
+
 import torch
 from torch.utils.data import Dataset
-import numpy as np
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+import nltk
+from nltk import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+
+nltk.download("wordnet")
+stopwords = list(stopwords.words("english"))
+
+warnings.filterwarnings("ignore")
+
 
 def process_wiki(fname):
     with open(fname, "r") as f:
@@ -59,17 +77,74 @@ def process_trainjsonl(fname):
 
     return out
 
+
+class LemmaTokenizer:
+    def __init__(self):
+        self.wnl = WordNetLemmatizer()
+
+    def __call__(self, doc):
+        tokens = []
+        for token in word_tokenize(doc):
+            if token not in string.punctuation and token not in stopwords:
+                tokens.append(token)
+
+        tokens = [self.wnl.lemmatize(token) for token in tokens]
+        return tokens
+
+
+def get_docs_sents_similarity(data):
+    print("[Building Sentences TF-IDF]")
+    vectorizer = TfidfVectorizer(tokenizer=LemmaTokenizer(), ngram_range=(1, 2))
+    corpus = [sent for doc in data for sent in doc]
+    vectorizer.fit(corpus)
+
+    docs_sents_similarity = []
+    for doc in tqdm(data):
+        doc_tfidf = vectorizer.transform(doc)
+        similarity = cosine_similarity(doc_tfidf, doc_tfidf)
+
+        sent_pair_score = []
+
+        if len(doc) == 1:
+            sent_pair = (0, 0)
+            score = similarity[0][0]
+            sent_pair_score.append((sent_pair, score))
+
+        for i in range(similarity.shape[0]):
+            for j in range(i + 1, similarity.shape[0]):
+                sent_pair = (i, j)
+                score = similarity[i][j]
+                sent_pair_score.append((sent_pair, score))
+
+        sent_pair_score.sort(key=lambda x: x[1], reverse=True)
+        docs_sents_similarity.append(sent_pair_score)
+
+    return docs_sents_similarity
+
+
 class DocDataset(Dataset):
-    def __init__(self, data):
+    def __init__(self, data, sample_method):
         super().__init__()
         self.data = data
-        
+        self.docs_sents_similarity = get_docs_sents_similarity(data)
+        self.sample_method = sample_method
+
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        doc_sents = np.random.choice(self.data[idx], size=2)
-        return torch.LongTensor([idx]), doc_sents[0], doc_sents[1]
+        doc = self.data[idx]
+
+        if self.sample_method == "uniform":
+            sent1, sent2 = np.random.choice(doc, size=2)
+
+        elif self.sample_method == "tf_idf":
+            doc_sent_similarity = self.docs_sents_similarity[idx]
+            (i, j), score = random.choice(doc_sent_similarity)
+            sent1, sent2 = doc[i], doc[j]
+
+        return torch.LongTensor([idx]), sent1, sent2
+
 
 class FeverDataset(Dataset):
     def __init__(self, wiki_path, data_path):
@@ -120,12 +195,17 @@ class FeverDataset(Dataset):
             datum["evidences"] = process_evidences
 
         return data
-    
-def get_dataloader(data, args, train=True):
-    bsz = args.config['train']['batch_size'] if train else args.config['eval']['batch_size']
-    n_jobs = args.config['train']['n_jobs'] if train else args.config['eval']['n_jobs']
 
-    dataset = DocDataset(data)
+
+def get_dataloader(data, args, train=True):
+    bsz = (
+        args.config["train"]["batch_size"]
+        if train
+        else args.config["eval"]["batch_size"]
+    )
+    n_jobs = args.config["train"]["n_jobs"] if train else args.config["eval"]["n_jobs"]
+
+    dataset = DocDataset(data, args.sample)
 
     return torch.utils.data.DataLoader(
         dataset,
