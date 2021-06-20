@@ -56,12 +56,16 @@ if __name__ == "__main__":
     args.config = yaml.load(open(args.config, 'r'), Loader=yaml.FullLoader)
     args.device = torch.device('cpu') if int(args.gpu.split(',')[0]) < 0 else torch.device('cuda:' + (args.gpu))
     
+    # load pre-processed dataset
+    # run `bash script/get_data.sh` to get the file
     with open(args.config['dataset']['docs_sentence'], 'rb') as f:
         data = pk.load(f)
         
+    # build a bert tokenizer and a bert model
     bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', use_fast=True)
     bert_model = BertModel.from_pretrained('bert-base-uncased')
     bert_model = bert_model.cuda()
     bert_model.eval()
 
+    # start training
     train(data, bert_model, bert_tokenizer, args)
