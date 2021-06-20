@@ -70,7 +70,7 @@ def build_model(args):
 
 
 def save_model(model, optimizer, args, current_step):
-    path = f"{args.ckptdir}/{args.loss}_{args.model}_{current_step}.pth"
+    path = f"{args.ckptdir}/{args.sample}_{args.loss}_{args.model}_{current_step}.pth"
     all_states = {
         "Model": model.state_dict(),
         "Optimizer": optimizer.state_dict(),
