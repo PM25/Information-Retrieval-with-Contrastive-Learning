@@ -131,3 +131,5 @@ config.yaml
 .pyre/
 data/
 .vscode
+ckpt/
+log/

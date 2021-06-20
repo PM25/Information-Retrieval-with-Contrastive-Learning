@@ -10,12 +10,14 @@ import scipy.cluster.hierarchy as sch
 
 def extract_all_emb(loader, model, device):
     emb_lst = []
-    print('[Runner] - Extracting noise embedding vectors')
-
+    print('[Runner] - Extracting sentence embedding vectors')
     with torch.no_grad():
         for batch in tqdm(loader):
-            indexes, lengths, noisy_wavs, noise_q, noise_k = batch
-            emb = model.noise2vec(noise_q.to(device)).cpu().numpy()
+            indexes, anchor_sample, positive_sample = batch
+            anchor_sample, positive_sample = model.bert_extract(anchor_sample, positive_sample, device)
+            emb = model.seq2vec(anchor_sample.to(device)).cpu().numpy()
+            emb_lst.append(emb)
+            emb = model.seq2vec(positive_sample.to(device)).cpu().numpy()
             emb_lst.append(emb)
 
     torch.cuda.empty_cache()
@@ -48,7 +50,7 @@ def get_clus_idx(d, gpu_id):
 def run_kmeans(proto_nce_config, loader, model, device):
     x = extract_all_emb(loader, model, device)
     print('[Runner] - Performing kmeans clustering')
-    results = {'noise2cluster': [], 'centroids': [], 'density': []}
+    results = {'emb2cluster': [], 'centroids': [], 'density': []}
 
     for seed, num_cluster in enumerate(proto_nce_config['cluster']['num_cluster']):
         # intialize faiss clustering parameters
@@ -63,14 +65,14 @@ def run_kmeans(proto_nce_config, loader, model, device):
 
         # for each sample, find cluster distance and assignments
         D, I = index.search(x, 1)
-        noise2cluster = [int(n[0]) for n in I]
-
+        emb2cluster = [int(n[0]) for n in I]
+        
         # get cluster centroids
         centroids = faiss.vector_to_array(clus.centroids).reshape(k, d)
 
         # sample-to-centroid distances for each cluster
         Dcluster = [[] for c in range(k)]
-        for nis, i in enumerate(noise2cluster):
+        for nis, i in enumerate(emb2cluster):
             Dcluster[i].append(D[nis][0])
 
         # concentration estimation (phi)
@@ -95,28 +97,26 @@ def run_kmeans(proto_nce_config, loader, model, device):
         centroids = torch.Tensor(centroids).cuda()
         centroids = torch.nn.functional.normalize(centroids, p=2, dim=1)
 
-        noise2cluster = torch.LongTensor(noise2cluster).cuda()
+        emb2cluster = torch.LongTensor(emb2cluster).cuda()
         density = torch.Tensor(density).cuda()
-
         results['centroids'].append(centroids)
         results['density'].append(density)
-        results['noise2cluster'].append(noise2cluster)
-
+        results['emb2cluster'].append(emb2cluster)
     return results
 
 
 def run_hierarchical_clustering(proto_nce_config, loader, model, device):
     x = extract_all_emb(loader, model, device)
     print('[Runner] - Performing hierarchical clustering')
-    results = {'noise2cluster': [], 'centroids': [], 'density': []}
+    results = {'emb2cluster': [], 'centroids': [], 'density': []}
     dis = fastcluster.linkage(x, metric='euclidean', method='ward')
 
     for seed, num_cluster in enumerate(proto_nce_config['cluster']['num_cluster']):
         # intialize faiss clustering parameters
 
-        noise2cluster = sch.fcluster(dis, num_cluster, criterion = 'maxclust') - 1
+        emb2cluster = sch.fcluster(dis, num_cluster, criterion = 'maxclust') - 1
         cls_lst = [[] for c in range(num_cluster)]
-        for i, cls in enumerate(noise2cluster):
+        for i, cls in enumerate(emb2cluster):
             cls_lst[cls].append(x[i])
         
         # centroids and sample-to-centroid distances for each cluster
@@ -151,48 +151,10 @@ def run_hierarchical_clustering(proto_nce_config, loader, model, device):
         centroids = torch.from_numpy(centroids).cuda()
         centroids = torch.nn.functional.normalize(centroids, p=2, dim=1)
 
-        noise2cluster = torch.LongTensor(noise2cluster).cuda()
+        emb2cluster = torch.LongTensor(emb2cluster).cuda()
         density = torch.Tensor(density).cuda()
 
         results['centroids'].append(centroids)
         results['density'].append(density)
-        results['noise2cluster'].append(noise2cluster)
+        results['emb2cluster'].append(emb2cluster)
     return results
-
-
-def distributed_sinkhorn(Q, nmb_iters):
-    with torch.no_grad():
-        Q = shoot_infs(Q)
-        sum_Q = torch.sum(Q)
-        dist.all_reduce(sum_Q)
-        Q /= sum_Q
-        r = torch.ones(Q.shape[0]).cuda(non_blocking=True) / Q.shape[0]
-        c = torch.ones(Q.shape[1]).cuda(
-            non_blocking=True) / (args.world_size * Q.shape[1])
-        for it in range(nmb_iters):
-            u = torch.sum(Q, dim=1)
-            dist.all_reduce(u)
-            u = r / u
-            u = shoot_infs(u)
-            Q *= u.unsqueeze(1)
-            Q *= (c / torch.sum(Q, dim=0)).unsqueeze(0)
-        return (Q / torch.sum(Q, dim=0, keepdim=True)).t().float()
-
-
-def shoot_infs(inp_tensor):
-    """Replaces inf by maximum of tensor"""
-    mask_inf = torch.isinf(inp_tensor)
-    ind_inf = torch.nonzero(mask_inf)
-    if len(ind_inf) > 0:
-        for ind in ind_inf:
-            if len(ind) == 2:
-                inp_tensor[ind[0], ind[1]] = 0
-            elif len(ind) == 1:
-                inp_tensor[ind[0]] = 0
-        m = torch.max(inp_tensor)
-        for ind in ind_inf:
-            if len(ind) == 2:
-                inp_tensor[ind[0], ind[1]] = m
-            elif len(ind) == 1:
-                inp_tensor[ind[0]] = m
-    return inp_tensor

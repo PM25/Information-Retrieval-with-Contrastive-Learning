@@ -1,6 +1,7 @@
 import torch
 from random import sample
-
+import random
+random.seed(1126)
 
 class CrossEntropy(torch.nn.Module):
     def __init__(self, use_hard_label=True):
@@ -103,6 +104,7 @@ class NCELoss(torch.nn.Module):
             # sample negative prototypes
             all_proto_id = [i for i in range(emb2cluster.max())]
             neg_proto_id = set(all_proto_id) - set(pos_proto_id.tolist())
+
             # sample r negative prototypes
             neg_proto_id = sample(neg_proto_id, self.num_neg_proto)
             neg_prototypes = prototypes[neg_proto_id]

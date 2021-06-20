@@ -1,7 +1,7 @@
 import copy
 import torch
 import torch.nn as nn
-
+from transformers import BertTokenizer, BertModel, AutoTokenizer
 
 class RetrievalModelWrapper(nn.Module):
     def __init__(self, base_encoder, criterion, loss_config,
@@ -28,6 +28,17 @@ class RetrievalModelWrapper(nn.Module):
             self.queue = nn.functional.normalize(self.queue, dim=0)
             self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
             self.add_queue_to_loss = False
+
+        self.bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', use_fast=True)
+        self.bert_model = BertModel.from_pretrained('bert-base-uncased')
+        self.bert_model.eval()
+    
+    @torch.no_grad()
+    def bert_extract(self, d1, d2, device):
+        t = self.bert_tokenizer(d1+d2, padding=True, truncation=True, return_tensors='pt')
+        output = self.bert_model(input_ids=t['input_ids'].to(device), attention_mask=t['attention_mask'].to(device))
+        output = output.last_hidden_state
+        return output[:len(d1)], output[len(d1):]
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
@@ -56,7 +67,13 @@ class RetrievalModelWrapper(nn.Module):
 
             self.queue_ptr[0] = ptr
 
-    def forward(self, anchor_sample, positive_sample, cluster_result=None, indexes=None):
+    def forward(self, anchor_sample, positive_sample, device, cluster_result=None, indexes=None):
+        if not indexes is None:
+            indexes = indexes.view(-1)
+        
+        # extract bert features
+        anchor_sample, positive_sample = self.bert_extract(anchor_sample, positive_sample, device)
+        
         # compute query features
         emb_q = self.seq2vec(anchor_sample)
         if self.use_LSTM:
