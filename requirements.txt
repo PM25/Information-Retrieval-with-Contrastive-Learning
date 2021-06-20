@@ -4,3 +4,4 @@ tqdm==4.59.0
 PyYAML==5.4.1
 ray==1.4.0
 faiss
+transformers==4.6.1
