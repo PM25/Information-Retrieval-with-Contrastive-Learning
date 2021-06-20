@@ -7,8 +7,9 @@ from unicodedata import normalize
 
 ray.init()
 
+
 def load_wikipages(config):
-    wiki_path = Path(config['dataset']["data_dir"]) / "wiki-pages"
+    wiki_path = Path(config["dataset"]["data_dir"]) / "wiki-pages"
     fnames = list(wiki_path.glob("wiki-*.jsonl"))
 
     wiki_data_dicts = [load_single_wikipages.remote(fname) for fname in fnames]
@@ -49,7 +50,7 @@ def to_dict(list_of_dict):
 
 
 def trainjsonl_documents(config):
-    fpath = Path(config['dataset']["data_dir"]) / "train.jsonl"
+    fpath = Path(config["dataset"]["data_dir"]) / "train.jsonl"
     with open(fpath, "r", encoding="utf-8") as f:
         json_strs = f.readlines()
 
@@ -67,14 +68,27 @@ def trainjsonl_documents(config):
 if __name__ == "__main__":
     with open("config.yaml", "r") as stream:
         config = yaml.safe_load(stream)
-        
+
+    print("[Processing wiki]")
     wikipages = load_wikipages(config)
     documents = trainjsonl_documents(config)
 
-    wiki = {doc: wikipages[doc] for doc in documents}
+    # Small wiki
+    print("[Saving small wiki]")
+    small_wiki_path = Path(config["dataset"]["small_wiki"])
+    if not small_wiki_path.is_file():
+        small_wiki = {doc: wikipages[doc] for doc in documents}
+        small_wiki_path.parent.mkdir(parents=True, exist_ok=True)
 
-    out_path = Path(config['dataset']["small_wiki"])
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(small_wiki_path, "w", encoding="utf8") as f:
+            json.dump(small_wiki, f, indent=4, ensure_ascii=False)
 
-    with open(out_path, "w", encoding="utf8") as f:
-        json.dump(wiki, f, indent=4, ensure_ascii=False)
+    # Full wiki
+    print("[Saving full wiki]")
+    small_wiki_path = Path(config["dataset"]["full_wiki"])
+    if not small_wiki_path.is_file():
+        small_wiki = {doc: wikipages[doc] for doc in documents}
+        small_wiki_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(small_wiki_path, "w", encoding="utf8") as f:
+            json.dump(small_wiki, f, indent=4, ensure_ascii=False)

@@ -1,14 +1,14 @@
-import yaml
-import random
 import os
-import numpy as np
-import torch
-import argparse
-from src.train import train
-import _pickle as pk
-from src.dataset import get_dataloader
-
+import yaml
 import time
+import torch
+import random
+import argparse
+import numpy as np
+import _pickle as pk
+
+from src.train import train
+from src.dataset import get_dataloader
 
 
 def get_args():

@@ -1,3 +1,4 @@
 python preprocessing/fetch_data.py
 python preprocessing/extract_wiki.py
 python preprocessing/docs_sentence_extraction.py
+python preprocessing/build_docs_sentence_similarity.py
