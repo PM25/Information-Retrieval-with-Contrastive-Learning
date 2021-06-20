@@ -17,23 +17,28 @@ import time
 
 def adjust_learning_rate(optimizer, steps, config):
     """Decay the learning rate based on schedule"""
-    lr = float(config['optimizer']['SGD']['learning_rate'])
-    lr *= 0.5 * (1. + math.cos(math.pi * steps /
-                               config['train']['total_steps']))
+    lr = float(config["optimizer"]["SGD"]["learning_rate"])
+    lr *= 0.5 * (1.0 + math.cos(math.pi * steps / config["train"]["total_steps"]))
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-        
+        param_group["lr"] = lr
+
+
 def get_optimizer(args, model):
-    if args.opt == 'sgd':
-        optimizer = torch.optim.SGD(model.parameters(),
-                                    lr=float(args.config['optimizer']['SGD']['learning_rate']),
-                                    momentum=float(args.config['optimizer']['SGD']['momentum']),
-                                    weight_decay=float(args.config['optimizer']['SGD']['weight_decay']))
-    elif args.opt == 'adam':
-        optimizer = torch.optim.Adam(model.parameters(),
-                                     lr=float(args.config['optimizer']['Adam']['learning_rate']),
-                                     betas=tuple(args.config['optimizer']['Adam']['betas']))
+    if args.opt == "sgd":
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=float(args.config["optimizer"]["SGD"]["learning_rate"]),
+            momentum=float(args.config["optimizer"]["SGD"]["momentum"]),
+            weight_decay=float(args.config["optimizer"]["SGD"]["weight_decay"]),
+        )
+    elif args.opt == "adam":
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=float(args.config["optimizer"]["Adam"]["learning_rate"]),
+            betas=tuple(args.config["optimizer"]["Adam"]["betas"]),
+        )
     return optimizer
+
 
 def optimizer_to(optim, device):
     for param in optim.state.values():
@@ -48,14 +53,16 @@ def optimizer_to(optim, device):
                     subparam.data = subparam.data.to(device)
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
-                        
+
+
 def bert_extractor(d1, d2, tokenizer, model, args):
     with torch.no_grad():
-        t = tokenizer(d1+d2, padding=True, truncation=True, return_tensors='pt')
+        t = tokenizer(d1 + d2, padding=True, truncation=True, return_tensors="pt")
         t = {k: v.to(args.device) for k, v in t.items()}
         output = model(**t)
     output = output.last_hidden_state
-    return output[:len(d1)], output[len(d1):]
+    return output[: len(d1)], output[len(d1) :]
+
 
 def train(data, bert_model, bert_tokenizer, args):
     # set initialization
@@ -65,24 +72,27 @@ def train(data, bert_model, bert_tokenizer, args):
         init_step = 0
     else:
         _, _, model, optimizer, init_step = load_model(args.ckpt)
-        
+
     model = model.to(args.device)
     optimizer_to(optimizer, args.device)
 
     # set batch size
-    assert args.config['train']['acml_batch_size'] % args.config['train']['batch_size'] == 0
+    assert (
+        args.config["train"]["acml_batch_size"] % args.config["train"]["batch_size"]
+        == 0
+    )
     batch_size = 0
-    acml_batch_size = args.config['train']['acml_batch_size']
-    
+    acml_batch_size = args.config["train"]["acml_batch_size"]
+
     # todo
     train_loader = get_dataloader(data, args, train=True)
     dev_loader = get_dataloader(data, args, train=False)
-    if args.loss in ['ProtoNCE', 'HProtoNCE']:
+    if args.loss in ["ProtoNCE", "HProtoNCE"]:
         feat_loader = get_dataloader(data, args, train=False)
     cluster_result = None
 
     # build logger directory
-    args.logdir = f'{args.logdir}/{args.loss}_{args.model}'
+    args.logdir = f"{args.logdir}/{args.loss}_{args.model}"
     if os.path.isdir(args.logdir):
         shutil.rmtree(args.logdir)
     os.makedirs(args.logdir)
@@ -95,58 +105,87 @@ def train(data, bert_model, bert_tokenizer, args):
     loss_record = []
     loss_sum = 0
     step_sum = init_step
-    total_steps = args.config['train']['total_steps']
+    total_steps = args.config["train"]["total_steps"]
 
-    print(f'[Runner] - Start training')
+    print(f"[Runner] - Start training")
     pbar = tqdm(initial=init_step, total=total_steps, dynamic_ncols=True)
 
     while step_sum < total_steps:
         epoch = step_sum // len(train_loader)
 
         # scheduler process
-        if args.opt == 'sgd':
+        if args.opt == "sgd":
             adjust_learning_rate(optimizer, step_sum, args.config)
 
         for batch in train_loader:
             try:
                 # extract all noise embeddings
-                if args.loss == 'ProtoNCE' and batch_size == 0 \
-                        and step_sum >= args.config['loss']['ProtoNCE']['cluster_start_steps'] \
-                        and step_sum % args.config['loss']['ProtoNCE']['cluster']['update_steps'] == 0:
+                if (
+                    args.loss == "ProtoNCE"
+                    and batch_size == 0
+                    and step_sum
+                    >= args.config["loss"]["ProtoNCE"]["cluster_start_steps"]
+                    and step_sum
+                    % args.config["loss"]["ProtoNCE"]["cluster"]["update_steps"]
+                    == 0
+                ):
                     cluster_result = run_kmeans(
-                        args.config['loss']['ProtoNCE'], feat_loader, model, args.device)
-                if args.loss == 'HProtoNCE' and batch_size == 0 \
-                        and step_sum >= args.config['loss']['HProtoNCE']['cluster_start_steps'] \
-                        and step_sum % args.config['loss']['HProtoNCE']['cluster']['update_steps'] == 0:
+                        args.config["loss"]["ProtoNCE"], feat_loader, model, args.device
+                    )
+                if (
+                    args.loss == "HProtoNCE"
+                    and batch_size == 0
+                    and step_sum
+                    >= args.config["loss"]["HProtoNCE"]["cluster_start_steps"]
+                    and step_sum
+                    % args.config["loss"]["HProtoNCE"]["cluster"]["update_steps"]
+                    == 0
+                ):
                     cluster_result = run_hierarchical_clustering(
-                        args.config['loss']['HProtoNCE'], feat_loader, model, args.device)
+                        args.config["loss"]["HProtoNCE"],
+                        feat_loader,
+                        model,
+                        args.device,
+                    )
 
                 # start using queue
-                if model.use_queue and step_sum >= args.config['loss'][args.loss]['queue_start_steps'] and not model.add_queue_to_loss:
+                if (
+                    model.use_queue
+                    and step_sum >= args.config["loss"][args.loss]["queue_start_steps"]
+                    and not model.add_queue_to_loss
+                ):
                     model.add_queue_to_loss = True
 
                 # load data
                 indexes, anchor_sample, positive_sample = batch
-                anchor_sample, positive_sample = bert_extractor(anchor_sample, positive_sample, bert_tokenizer, bert_model, args)
+                anchor_sample, positive_sample = bert_extractor(
+                    anchor_sample, positive_sample, bert_tokenizer, bert_model, args
+                )
                 batch_size += len(indexes)
 
                 # process forward and backward
-                loss = model(anchor_sample, positive_sample, cluster_result,
-                                indexes) / acml_batch_size
+                loss = (
+                    model(anchor_sample, positive_sample, cluster_result, indexes)
+                    / acml_batch_size
+                )
                 loss.backward()
                 loss_sum += loss.item()
 
-           
-                if batch_size == acml_batch_size or len(indexes) != args.config['train']['batch_size']:
+                if (
+                    batch_size == acml_batch_size
+                    or len(indexes) != args.config["train"]["batch_size"]
+                ):
                     # gradient clipping
-                    if args.model == 'LSTM':
+                    if args.model == "LSTM":
                         down_paras = list(model.parameters())
                         grad_norm = torch.nn.utils.clip_grad_norm_(
-                            down_paras, args.config['optimizer']['gradient_clipping'])
+                            down_paras, args.config["optimizer"]["gradient_clipping"]
+                        )
                         # update parameters
                         if math.isnan(grad_norm) or math.isinf(grad_norm):
                             print(
-                                '[Runner] - Error : grad norm is nan/inf at step {step_sum}')
+                                "[Runner] - Error : grad norm is nan/inf at step {step_sum}"
+                            )
                     optimizer.step()
                     if model.use_momentum:
                         model._momentum_update_key_encoder()
@@ -160,25 +199,32 @@ def train(data, bert_model, bert_tokenizer, args):
                     loss_sum = 0
 
                 # log training recording
-                if (step_sum != init_step and step_sum % int(args.config['train']['log_step']) == 0) and batch_size == 0:
+                if (
+                    step_sum != init_step
+                    and step_sum % int(args.config["train"]["log_step"]) == 0
+                ) and batch_size == 0:
                     loss_avg = np.mean(loss_record)
                     loss_record = []
-                    log.add_scalar('train_loss', loss_avg, step_sum)
-                    log.add_scalar('grad_norm', grad_norm, step_sum)
+                    log.add_scalar("train_loss", loss_avg, step_sum)
+                    log.add_scalar("grad_norm", grad_norm, step_sum)
 
                 # evaluate and save the best
-                if (step_sum != init_step and step_sum % int(args.config['train']['eval_step']) == 0) and batch_size == 0:
-                    print(f'[Runner] - Evaluating on development set')
+                if (
+                    step_sum != init_step
+                    and step_sum % int(args.config["train"]["eval_step"]) == 0
+                ) and batch_size == 0:
+                    print(f"[Runner] - Evaluating on development set")
                     loss = evaluate(args, args.config, dev_loader, model)
-                    log.add_scalar('dev_loss', loss, step_sum)
+                    log.add_scalar("dev_loss", loss, step_sum)
                     pbar.set_description(
-                        'Train_Loss %.5f | Valid_Loss %.5f' % (loss_avg, loss))
+                        "Train_Loss %.5f | Valid_Loss %.5f" % (loss_avg, loss)
+                    )
                     save_model(model, optimizer, args, args.config, step_sum)
 
             except RuntimeError as e:
-                if not 'CUDA out of memory' in str(e):
+                if not "CUDA out of memory" in str(e):
                     raise
-                print('[Runner] - CUDA out of memory at step: ', step_sum)
+                print("[Runner] - CUDA out of memory at step: ", step_sum)
                 optimizer.zero_grad()
                 torch.cuda.empty_cache()
 

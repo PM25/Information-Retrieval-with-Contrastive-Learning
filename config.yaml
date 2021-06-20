@@ -13,7 +13,7 @@ loss:
         use_momentum: True
         momentum: 0.9
         use_queue: True
-        queue_size: 32768
+        queue_size: 12544
         queue_start_steps: 5000
 
     ProtoNCE:
@@ -21,13 +21,13 @@ loss:
         use_momentum: True
         momentum: 0.9
         use_queue: True
-        queue_size: 32768
+        queue_size: 12544
         queue_start_steps: 5000
         cluster_start_steps: 8000
         cluster:
             update_steps: 4000
-            num_cluster: [16384, 24576, 32768]
-            num_neg_proto: 10240
+            num_cluster: [4096, 6144, 8192]
+            num_neg_proto: 3072
             verbose: False
             niter: 20
             nredo: 5
@@ -39,13 +39,13 @@ loss:
         use_momentum: True
         momentum: 0.9
         use_queue: True
-        queue_size: 32768
+        queue_size: 12544
         queue_start_steps: 5000
         cluster_start_steps: 8000
         cluster:
             update_steps: 4000
-            num_cluster: [16384, 24576, 32768]
-            num_neg_proto: 10240
+            num_cluster: [4096, 6144, 8192]
+            num_neg_proto: 3072
 
 optimizer:
     SGD:
@@ -65,8 +65,7 @@ train:
     acml_batch_size: 256 # sample
     apex: False # Use APEX (see https://github.com/NVIDIA/apex for more details)
     total_steps: 100000 # total steps for training, a step is a batch of update
-    eval_step: 1000 # evaluate model every this amount of training steps
-    log_step: 200 # evaluate model every this amount of training steps
+    log_step: 1000 # evaluate model every this amount of training steps
     n_jobs: 6
 
 # Evaluation options
@@ -75,6 +74,6 @@ eval:
     n_jobs: 3
 
 dataset:
-    data_dir: /tmp2/py/data/fever/
+    data_dir: data/fever/
     small_wiki: data/small_wiki.json
-    docs_sentence: /tmp2/py/data/fever/docs_sentence.pkl
+    docs_sentence: data/docs_sentence.pkl
