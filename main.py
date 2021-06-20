@@ -68,6 +68,13 @@ def get_args():
         choices=["adam", "sgd"],
         help="Selection of optimizer type",
     )
+    parser.add_argument(
+        "--sample",
+        default="uniform",
+        type=str,
+        choices=["uniform", "tf_idf"],
+        help="Selection of optimizer type",
+    )
 
     # get parsing results
     args = parser.parse_args()
@@ -98,6 +105,6 @@ if __name__ == "__main__":
     # run `bash script/get_data.sh` to get the file
     with open(args.config["dataset"]["docs_sentence"], "rb") as f:
         data = pk.load(f)
-          
+
     # start training
     train(data, args)
