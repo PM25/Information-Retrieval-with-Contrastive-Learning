@@ -17,16 +17,6 @@ from torch.utils.data import Dataset
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-import nltk
-from nltk import word_tokenize
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import stopwords
-
-nltk.download("wordnet")
-stopwords = list(stopwords.words("english"))
-
-warnings.filterwarnings("ignore")
-
 
 def process_wiki(fname):
     with open(fname, "r") as f:
