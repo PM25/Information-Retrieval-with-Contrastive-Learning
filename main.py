@@ -73,7 +73,7 @@ def get_args():
         default="uniform",
         type=str,
         choices=["uniform", "tf_idf"],
-        help="Selection of optimizer type",
+        help="Sampling methods",
     )
 
     # get parsing results

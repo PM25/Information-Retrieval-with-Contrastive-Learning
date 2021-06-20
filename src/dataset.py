@@ -1,5 +1,6 @@
 import json
 import yaml
+import math
 import string
 import random
 import warnings
@@ -126,8 +127,10 @@ class DocDataset(Dataset):
     def __init__(self, data, sample_method):
         super().__init__()
         self.data = data
-        self.docs_sents_similarity = get_docs_sents_similarity(data)
         self.sample_method = sample_method
+        if sample_method == "tf_idf":
+            self.docs_sents_similarity = get_docs_sents_similarity(data)
+            self.ratio = 0.1
 
     def __len__(self):
         return len(self.data)
@@ -140,7 +143,8 @@ class DocDataset(Dataset):
 
         elif self.sample_method == "tf_idf":
             doc_sent_similarity = self.docs_sents_similarity[idx]
-            (i, j), score = random.choice(doc_sent_similarity)
+            k = math.ceil(len(doc_sent_similarity) * self.ratio)
+            (i, j), score = random.choice(doc_sent_similarity[:k])
             sent1, sent2 = doc[i], doc[j]
 
         return torch.LongTensor([idx]), sent1, sent2
