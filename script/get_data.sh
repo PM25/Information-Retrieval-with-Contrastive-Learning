@@ -1,2 +1,3 @@
 python preprocessing/fetch_data.py
 python preprocessing/extract_wiki.py
+python preprocessing/docs_sentence_extraction.py

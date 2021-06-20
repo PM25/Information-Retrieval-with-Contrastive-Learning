@@ -78,3 +78,4 @@ eval:
 dataset:
   data_dir: data/fever/
   small_wiki: data/small_wiki.json
+  docs_sentence: data/docs_sentence.pkl
