@@ -48,11 +48,16 @@ def optimizer_to(optim, device):
                     subparam.data = subparam.data.to(device)
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
+                        
+def bert_extractor(d1, d2, tokenizer, model, args):
+    with torch.no_grad():
+        t = tokenizer(d1+d2, padding=True, truncation=True, return_tensors='pt')
+        t = {k: v.to(args.device) for k, v in t.items()}
+        output = model(**t)
+    output = output.last_hidden_state
+    return output[:len(d1)], output[len(d1):]
 
-def train(args):
-    # set cuda device
-    device = torch.device('cpu') if args.gpu < 0 else torch.device('cuda:%d' % (args.gpu))
-
+def train(data, bert_model, bert_tokenizer, args):
     # set initialization
     if args.ckpt is None:
         model = build_model(args)
@@ -61,8 +66,8 @@ def train(args):
     else:
         _, _, model, optimizer, init_step = load_model(args.ckpt)
         
-    model = model.to(device)
-    optimizer_to(optimizer, device)
+    model = model.to(args.device)
+    optimizer_to(optimizer, args.device)
 
     # set batch size
     assert args.config['train']['acml_batch_size'] % args.config['train']['batch_size'] == 0
@@ -70,10 +75,10 @@ def train(args):
     acml_batch_size = args.config['train']['acml_batch_size']
     
     # todo
-    train_loader = get_dataloader(args, train=True)
-    dev_loader = get_dataloader(args, train=False)
+    train_loader = get_dataloader(data, args, train=True)
+    dev_loader = get_dataloader(data, args, train=False)
     if args.loss in ['ProtoNCE', 'HProtoNCE']:
-        feat_loader = get_dataloader(args, train=False)
+        feat_loader = get_dataloader(data, args, train=False)
     cluster_result = None
 
     # build logger directory
@@ -109,12 +114,12 @@ def train(args):
                         and step_sum >= args.config['loss']['ProtoNCE']['cluster_start_steps'] \
                         and step_sum % args.config['loss']['ProtoNCE']['cluster']['update_steps'] == 0:
                     cluster_result = run_kmeans(
-                        args.config['loss']['ProtoNCE'], feat_loader, model, device)
+                        args.config['loss']['ProtoNCE'], feat_loader, model, args.device)
                 if args.loss == 'HProtoNCE' and batch_size == 0 \
                         and step_sum >= args.config['loss']['HProtoNCE']['cluster_start_steps'] \
                         and step_sum % args.config['loss']['HProtoNCE']['cluster']['update_steps'] == 0:
                     cluster_result = run_hierarchical_clustering(
-                        args.config['loss']['HProtoNCE'], feat_loader, model, device)
+                        args.config['loss']['HProtoNCE'], feat_loader, model, args.device)
 
                 # start using queue
                 if model.use_queue and step_sum >= args.config['loss'][args.loss]['queue_start_steps'] and not model.add_queue_to_loss:
@@ -122,7 +127,7 @@ def train(args):
 
                 # load data
                 indexes, anchor_sample, positive_sample = batch
-                anchor_sample, positive_sample = anchor_sample.to(device), positive_sample.to(device)
+                anchor_sample, positive_sample = bert_extractor(anchor_sample, positive_sample, bert_tokenizer, bert_model, args)
                 batch_size += len(indexes)
 
                 # process forward and backward

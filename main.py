@@ -5,6 +5,12 @@ import numpy as np
 import torch
 import argparse
 from src.train import train
+import _pickle as pk
+from src.dataset import get_dataloader
+from transformers import BertTokenizer, BertModel, AutoTokenizer
+from src.train import bert_extractor
+
+import time
 
 def get_args():
     # contruct parser object
@@ -20,11 +26,8 @@ def get_args():
     # Options
     parser.add_argument('--seed', default=1337, type=int,
                         help='Random seed for reproducable results.')
-    parser.add_argument('--gpu', default=0, type=int, help='Assigning GPU id. (-1: use CPU)')
-    parser.add_argument('--multi_gpu', action='store_true',
-                        help='Enable Multi-GPU training.')
-    parser.add_argument(
-        '--ckpt', type=str, help="Path to load target pretrain model")
+    parser.add_argument('--gpu', default='0', type=str, help='Assigning GPU id. (-1: use CPU)')
+    parser.add_argument('--ckpt', type=str, help="Path to load target pretrain model")
 
     # contrastive learning argument
     parser.add_argument('--model', default='LSTM', type=str, choices=['LSTM'], help="Selection of module type")
@@ -36,7 +39,6 @@ def get_args():
     # get parsing results
     args = parser.parse_args()
     return args
-
 
 if __name__ == "__main__":
     # parse
@@ -52,4 +54,14 @@ if __name__ == "__main__":
 
     # load configure
     args.config = yaml.load(open(args.config, 'r'), Loader=yaml.FullLoader)
-    train(args)
+    args.device = torch.device('cpu') if int(args.gpu.split(',')[0]) < 0 else torch.device('cuda:' + (args.gpu))
+    
+    with open(args.config['dataset']['docs_sentence'], 'rb') as f:
+        data = pk.load(f)
+        
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', use_fast=True)
+    bert_model = BertModel.from_pretrained('bert-base-uncased')
+    bert_model = bert_model.cuda()
+    bert_model.eval()
+
+    train(data, bert_model, bert_tokenizer, args)

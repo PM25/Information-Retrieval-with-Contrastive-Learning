@@ -6,6 +6,7 @@ from pathlib import Path
 from unicodedata import normalize
 import torch
 from torch.utils.data import Dataset
+import numpy as np
 
 def process_wiki(fname):
     with open(fname, "r") as f:
@@ -58,16 +59,17 @@ def process_trainjsonl(fname):
 
     return out
 
-class DummyDataset(Dataset):
-    def __init__(self):
+class DocDataset(Dataset):
+    def __init__(self, data):
         super().__init__()
-        self.data = list(range(100000))
+        self.data = data
         
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.LongTensor([idx]), torch.rand(16, 768), torch.rand(56, 768)
+        doc_sents = np.random.choice(self.data[idx], size=2)
+        return torch.LongTensor([idx]), doc_sents[0], doc_sents[1]
 
 class FeverDataset(Dataset):
     def __init__(self, wiki_path, data_path):
@@ -119,17 +121,18 @@ class FeverDataset(Dataset):
 
         return data
     
-def get_dataloader(args, train=True):
+def get_dataloader(data, args, train=True):
     bsz = args.config['train']['batch_size'] if train else args.config['eval']['batch_size']
     n_jobs = args.config['train']['n_jobs'] if train else args.config['eval']['n_jobs']
 
-    dataset = DummyDataset()
+    dataset = DocDataset(data)
 
     return torch.utils.data.DataLoader(
         dataset,
         batch_size=bsz,
         shuffle=train,
         num_workers=n_jobs,
-        drop_last=train
+        drop_last=train,
+        pin_memory=True
         # collate_fn=dataset.collate_fn
     )
