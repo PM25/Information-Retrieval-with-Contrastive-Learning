@@ -86,10 +86,9 @@ if __name__ == "__main__":
 
     # Full wiki
     print("[Saving full wiki]")
-    small_wiki_path = Path(config["dataset"]["full_wiki"])
-    if not small_wiki_path.is_file():
-        small_wiki = {doc: wikipages[doc] for doc in documents}
-        small_wiki_path.parent.mkdir(parents=True, exist_ok=True)
+    full_wiki_path = Path(config["dataset"]["full_wiki"])
+    if not full_wiki_path.is_file():
+        full_wiki_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(small_wiki_path, "w", encoding="utf8") as f:
-            json.dump(small_wiki, f, indent=4, ensure_ascii=False)
+        with open(full_wiki_path, "w", encoding="utf8") as f:
+            json.dump(wikipages, f, indent=4, ensure_ascii=False)

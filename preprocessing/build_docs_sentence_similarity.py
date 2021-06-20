@@ -18,6 +18,7 @@ from nltk.corpus import stopwords
 
 nltk.download("wordnet")
 nltk.download("stopwords")
+nltk.download("punkt")
 stopwords = list(stopwords.words("english"))
 
 warnings.filterwarnings("ignore")
