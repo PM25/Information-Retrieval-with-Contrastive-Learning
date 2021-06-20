@@ -52,6 +52,7 @@ def extract_docs_sentence(dic):
             if len(s) == 1:
                 continue
             doc.append(s)
+        docs.append(doc)
 
     return docs
 
