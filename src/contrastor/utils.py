@@ -94,11 +94,11 @@ def run_kmeans(proto_nce_config, loader, model, device):
             density / density.mean()  # scale the mean to temperature
 
         # convert to cuda Tensors for broadcast
-        centroids = torch.Tensor(centroids).cuda()
+        centroids = torch.Tensor(centroids).to(device)
         centroids = torch.nn.functional.normalize(centroids, p=2, dim=1)
 
-        emb2cluster = torch.LongTensor(emb2cluster).cuda()
-        density = torch.Tensor(density).cuda()
+        emb2cluster = torch.LongTensor(emb2cluster).to(device)
+        density = torch.Tensor(density).to(device)
         results['centroids'].append(centroids)
         results['density'].append(density)
         results['emb2cluster'].append(emb2cluster)
@@ -148,11 +148,11 @@ def run_hierarchical_clustering(proto_nce_config, loader, model, device):
             density / density.mean()  # scale the mean to temperature
 
         # convert to cuda Tensors for broadcast
-        centroids = torch.from_numpy(centroids).cuda()
+        centroids = torch.from_numpy(centroids).to(device)
         centroids = torch.nn.functional.normalize(centroids, p=2, dim=1)
 
-        emb2cluster = torch.LongTensor(emb2cluster).cuda()
-        density = torch.Tensor(density).cuda()
+        emb2cluster = torch.LongTensor(emb2cluster).to(device)
+        density = torch.Tensor(density).to(device)
 
         results['centroids'].append(centroids)
         results['density'].append(density)

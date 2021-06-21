@@ -167,7 +167,7 @@ def train(data, args):
                         model._momentum_update_key_encoder()
 
                     optimizer.zero_grad()
-                    torch.cuda.empty_cache()
+                    # torch.cuda.empty_cache()
                     loss_record.append(loss_sum)
                     pbar.update(1)
                     step_sum += 1

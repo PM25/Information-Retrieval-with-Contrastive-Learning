@@ -109,7 +109,7 @@ class NCELoss(torch.nn.Module):
             neg_proto_id = sample(neg_proto_id, self.num_neg_proto)
             neg_prototypes = prototypes[neg_proto_id]
 
-            proto_selected = torch.cat([pos_prototypes, neg_prototypes], dim=0)
+            proto_selected = torch.cat([pos_prototypes, neg_prototypes], dim=0).to(q.device)
 
             # compute prototypical logits
             logits_proto = torch.mm(q, proto_selected.t())
