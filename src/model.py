@@ -39,18 +39,22 @@ class LSTM(nn.Module):
         predicted, _ = self.lstm(features)
         predicted = self.scaling_layer(predicted)
         return predicted
-    
+
 
 def get_optimizer(args, model):
-    if args.opt == 'sgd':
-        optimizer = torch.optim.SGD(model.parameters(),
-                                    lr=float(args.config['optimizer']['SGD']['learning_rate']),
-                                    momentum=float(args.config['optimizer']['SGD']['momentum']),
-                                    weight_decay=float(args.config['optimizer']['SGD']['weight_decay']))
-    elif args.opt == 'adam':
-        optimizer = torch.optim.Adam(model.parameters(),
-                                     lr=float(args.config['optimizer']['Adam']['learning_rate']),
-                                     betas=tuple(args.config['optimizer']['Adam']['betas']))
+    if args.opt == "sgd":
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=float(args.config["optimizer"]["SGD"]["learning_rate"]),
+            momentum=float(args.config["optimizer"]["SGD"]["momentum"]),
+            weight_decay=float(args.config["optimizer"]["SGD"]["weight_decay"]),
+        )
+    elif args.opt == "adam":
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=float(args.config["optimizer"]["Adam"]["learning_rate"]),
+            betas=tuple(args.config["optimizer"]["Adam"]["betas"]),
+        )
     return optimizer
 
 
