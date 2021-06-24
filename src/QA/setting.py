@@ -4,6 +4,7 @@ import numpy as np
 
 
 def set_random_seed(seed):
+    print(f"[seed: {seed}]")
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
