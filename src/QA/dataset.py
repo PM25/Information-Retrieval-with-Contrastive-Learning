@@ -19,7 +19,7 @@ def process_wiki(fname):
     with open(fname, "r") as f:
         wiki = json.load(f)
 
-    for datum in tqdm(wiki.values()):
+    for datum in tqdm(wiki.values(), desc="[Processing Wiki Data]"):
         lines = []
         for line in datum["lines"].split("\n"):
             line = line.split("\t")
@@ -74,7 +74,7 @@ class FeverDatasetTokenize(Dataset):
         self.tokenizer = AutoTokenizer.from_pretrained("roberta-base")
         self.label_map = {"SUPPORTS": 1, "REFUTES": 0}
 
-        train_path = Path(data_path) / "train.jsonl"
+        train_path = Path(data_path)
         train_data = process_trainjsonl(train_path)
         train_data = self.process(train_data)
 
@@ -104,8 +104,7 @@ class FeverDatasetTokenize(Dataset):
 
     def process(self, data):
         data = data.copy()
-
-        for datum in tqdm(data):
+        for datum in tqdm(data, desc="[Tokenizing Data]"):
             evidences = datum["evidences"]
 
             process_evidences = []

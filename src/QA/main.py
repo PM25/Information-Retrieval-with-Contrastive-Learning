@@ -32,7 +32,7 @@ def train(model, train_loader, val_loader=None, config=config):
 
     optimizer = AdamW(
         model.parameters(),
-        lr=config["optimizer"]["Adam"]["learning_rate"],
+        lr=eval(config["optimizer"]["Adam"]["learning_rate"]),
     )
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
@@ -83,7 +83,7 @@ def train(model, train_loader, val_loader=None, config=config):
 
 
 @torch.no_grad()
-def evaluate(model, val_loader):
+def evaluate(model, val_loader, report=False):
     model.eval()
     model.to(torch_device)
 
@@ -99,43 +99,22 @@ def evaluate(model, val_loader):
         preds.extend(pred.tolist())
         val_loss.append(loss.item())
 
-    val_acc = f1_score(truth, preds, average="macro")
+    if report:
+        val_acc = classification_report(truth, preds)
+    else:
+        val_acc = f1_score(truth, preds, average="macro")
+
     val_loss = np.mean(val_loss)
-    print(classification_report(truth, preds))
 
     model.train()
 
     return val_loss, val_acc
 
 
-def save_preds(model, data_loader):
-    model.eval()
-    model.to(torch_device)
-
-    all_preds = []
-    for step, batch in enumerate(data_loader):
-        _id = batch["id"]
-        labels = batch["label"]
-        input_ids = batch["input_ids"].to(torch_device)
-        attention_mask = batch["attention_mask"].to(torch_device)
-
-        preds = model.pred_label(input_ids, attention_mask, labels)
-        all_preds.extend(list(zip(_id.tolist(), preds)))
-
-    Path("output").mkdir(parents=True, exist_ok=True)
-    with open("output/qa.csv", "w") as f:
-        csvwriter = csv.writer(f, delimiter=",")
-        csvwriter.writerow(["id", "answer"])
-        for _id, pred in all_preds:
-            csvwriter.writerow([_id, pred])
-    with open("output/qa_configs.yml", "w") as yaml_file:
-        yaml.dump(config, yaml_file, default_flow_style=False)
-    print("*Successfully saved prediction to output/qa.csv")
-
-
 if __name__ == "__main__":
+
     dataset = FeverDatasetTokenize(
-        config["dataset"]["small_wiki"], config["dataset"]["data_dir"]
+        config["dataset"]["small_wiki"], config["dataset"]["train_data"]
     )
 
     val_size = int(len(dataset) * config["eval"]["size"])
@@ -158,8 +137,15 @@ if __name__ == "__main__":
     qa_model = train(RoBertaClassifier(config), train_loader, val_loader)
     torch.save(qa_model, "models/qa.pth")
 
-    # test_dataset = dataset(configs, configs["dev_qa_data"])
-    # test_loader = DataLoader(
-    #     test_dataset, batch_size=configs["batch_size"], num_workers=4
-    # )
-    # save_preds(qa_model, test_loader)
+    # evaluation on dev data
+    test_dataset = FeverDatasetTokenize(
+        config["dataset"]["small_wiki"], config["dataset"]["dev_data"]
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=config["eval"]["batch_size"],
+        num_workers=config["eval"]["n_jobs"],
+    )
+    report = evaluate(qa_model, test_loader)
+    print('[Dev Report]')
+    print(report)
