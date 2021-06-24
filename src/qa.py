@@ -14,22 +14,19 @@ from dataset import FeverDatasetTokenize
 from qa_model import RoBertaClassifier
 from setting import set_random_seed, get_device
 
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score, accuracy_score, classification_report
 
 with open("config.yaml", "r") as stream:
     configs = yaml.safe_load(stream)
     configs["seed"] = 1009
     configs["device_id"] = 0
     configs["val_size"] = 0.2
-    configs["warmup_steps"] = 500
-    configs["learning_rate"] = 5e-3
-    configs["epochs"] = 15
-    configs["log_step"] = 5
-    configs["batch_size"] = 6
-    configs["hidden_dim"] = 300
-    configs["n_cls_layers"] = 3
+    configs["warmup_steps"] = 1000
+    configs["learning_rate"] = 1e-5
+    configs["epochs"] = 4
+    configs["log_step"] = 1
+    configs["batch_size"] = 8
     configs["freeze_bert"] = False
-    configs["dropout"] = 0.2
 
 set_random_seed(configs["seed"])
 torch_device = get_device(configs["device_id"])
@@ -74,7 +71,7 @@ def train(model, train_loader, val_loader=None, configs=configs):
                 val_loss, val_acc = evaluate(model, val_loader)
                 train_loss = total_loss / len(train_loader)
                 tqdm_train_loader.set_description(
-                    f"[Epoch:{epoch:03}] Train Loss: {train_loss:.3f} | Val Loss: {val_loss:.3f} | Val Acc: {val_acc:.3f}",
+                    f"[Epoch:{epoch:03}] Train Loss: {train_loss:.3f} | Val Loss: {val_loss:.3f} | Val F1: {val_acc:.3f}",
                 )
                 writer.add_scalar("Risk_Accuracy/valalidation", val_acc, epoch)
                 writer.add_scalar("Risk_Loss/validation", val_loss, epoch)
@@ -98,7 +95,7 @@ def evaluate(model, val_loader):
 
     val_loss = []
     truth, preds = [], []
-    for step, batch in enumerate(val_loader):
+    for batch in val_loader:
         input_ids = batch["input_ids"].to(torch_device)
         attention_mask = batch["attention_mask"].to(torch_device)
         answer = batch["label"].to(torch_device)
@@ -108,8 +105,9 @@ def evaluate(model, val_loader):
         preds.extend(pred.tolist())
         val_loss.append(loss.item())
 
-    val_acc = accuracy_score(truth, preds)
+    val_acc = f1_score(truth, preds, average="macro")
     val_loss = np.mean(val_loss)
+    print(classification_report(truth, preds))
 
     model.train()
 

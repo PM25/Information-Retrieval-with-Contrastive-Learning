@@ -163,33 +163,36 @@ class FeverDatasetTokenize(Dataset):
         train_data = process_trainjsonl(train_path)
         train_data = self.process(train_data)
 
-        pos_data, neg_data = [], []
+        # pos_data, neg_data = [], []
+        # for datum in train_data:
+        #     if datum["label"] == "NOT ENOUGH INFO":
+        #         continue
+
+        #     label = self.label_map[datum["label"]]
+
+        #     if label == 1:
+        #         pos_data.append(datum)
+        #     elif label == 0:
+        #         neg_data.append(datum)
+
+        # print(len(pos_data), len(neg_data))
+
+        # # balance pos & neg data
+        # if len(pos_data) > len(neg_data):
+        #     pos_data = random.sample(pos_data, k=len(neg_data))
+        # elif len(pos_data) < len(neg_data):
+        #     neg_data = random.sample(neg_data, k=len(pos_data))
+
+        # assert len(pos_data) == len(neg_data)
+        # train_data = pos_data + neg_data
+        # random.shuffle(train_data)
+        # print(f"total training data: {len(train_data)}")
+
+        self.data = []
         for datum in train_data:
             if datum["label"] == "NOT ENOUGH INFO":
                 continue
 
-            label = self.label_map[datum["label"]]
-
-            if label == 1:
-                pos_data.append(datum)
-            elif label == 0:
-                neg_data.append(datum)
-
-        print(len(pos_data), len(neg_data))
-
-        # balance pos & neg data
-        if len(pos_data) > len(neg_data):
-            pos_data = random.sample(pos_data, k=len(neg_data))
-        elif len(pos_data) < len(neg_data):
-            neg_data = random.sample(neg_data, k=len(pos_data))
-
-        assert len(pos_data) == len(neg_data)
-        train_data = pos_data + neg_data
-        random.shuffle(train_data)
-        print(f"total training data: {len(train_data)}")
-
-        self.data = []
-        for datum in train_data:
             label = datum["label"]  # SUPPORTS, NOT VERIFIABLE, REFUTES
 
             self.data.append(
