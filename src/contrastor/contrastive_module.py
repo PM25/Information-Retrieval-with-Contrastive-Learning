@@ -93,6 +93,12 @@ class RetrievalModelWrapper(nn.Module):
 
         return loss
 
+    def ctx2vec(self, context, device):
+        t = self.bert_tokenizer(context, padding=True, truncation=True, return_tensors='pt')
+        output = self.bert_model(input_ids=t['input_ids'].to(device), attention_mask=t['attention_mask'].to(device))
+        output = output.last_hidden_state
+        return self.seq2vec(output)
+
     def seq2vec(self, seq, query=True):
         assert seq.ndim == 3
 

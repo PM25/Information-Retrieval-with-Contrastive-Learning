@@ -10,7 +10,6 @@ import _pickle as pk
 from tqdm import tqdm
 from pathlib import Path
 from unicodedata import normalize
-from transformers import AutoTokenizer
 
 import torch
 from torch.utils.data import Dataset
@@ -23,7 +22,7 @@ def process_wiki(fname):
     with open(fname, "r") as f:
         wiki = json.load(f)
 
-    for datum in tqdm(wiki.values(), desc="[Processing Wiki Data]"):
+    for datum in tqdm(wiki.values()):
         lines = []
         for line in datum["lines"].split("\n"):
             line = line.split("\t")
@@ -35,7 +34,7 @@ def process_wiki(fname):
     return wiki
 
 
-def process_trainjsonl(fname):
+def process_jsonl(fname):
     with open(fname, "r", encoding="utf-8") as f:
         json_strs = f.readlines()
 
@@ -72,9 +71,10 @@ def process_trainjsonl(fname):
 
 
 class DocDataset(Dataset):
-    def __init__(self, data, args):
+    def __init__(self, args):
         super().__init__()
-        self.data = data
+        with open(args.config["dataset"]["docs_sentence"], "rb") as f:
+            self.data = pk.load(f)
         self.sample_method = args.sample
         if self.sample_method == "tf_idf":
             with open(
@@ -102,18 +102,20 @@ class DocDataset(Dataset):
 
 
 class FeverDataset(Dataset):
-    def __init__(self, wiki_path, data_path):
+    def __init__(self, args):
         super().__init__()
+        wiki_path = args.config['dataset']['small_wiki']
+        fever_path = args.config['dataset']['dev_data']
+
         self.wiki = process_wiki(wiki_path)
 
-        train_path = Path(data_path) / "train.jsonl"
-        train_data = process_trainjsonl(train_path)
-        train_data = self.process(train_data)
+        fever_data = process_jsonl(fever_path)
+        fever_data = self.process(fever_data)
 
         self.label_map = {"SUPPORTS": 1, "REFUTES": 0}
 
         self.data = []
-        for datum in train_data:
+        for datum in fever_data:
             label = datum["label"]  # SUPPORTS, NOT VERIFIABLE, REFUTES
             if label == "NOT ENOUGH INFO":
                 continue
@@ -135,10 +137,10 @@ class FeverDataset(Dataset):
 
     def process(self, data):
         data = data.copy()
-        for datum in tqdm(data, desc="[Tokenizing Data]"):
+        for datum in data:
             evidences = datum["evidences"]
-
             process_evidences = []
+
             for doc_id, sent_ids in evidences.items():
                 process_evidences.append(
                     {
@@ -151,8 +153,10 @@ class FeverDataset(Dataset):
 
         return data
 
+    def collate_fn(self, data):
+        return data
 
-def get_dataloader(data, args, train=True):
+def get_dataloader(args, train=True):
     bsz = (
         args.config["train"]["batch_size"]
         if train
@@ -160,7 +164,12 @@ def get_dataloader(data, args, train=True):
     )
     n_jobs = args.config["train"]["n_jobs"] if train else args.config["eval"]["n_jobs"]
 
-    dataset = DocDataset(data, args)
+    if args.data == 'doc':
+        dataset = DocDataset(args)
+        collate_fn = None
+    elif args.data == 'fever':
+        dataset = FeverDataset(args)
+        collate_fn = dataset.collate_fn
 
     return torch.utils.data.DataLoader(
         dataset,
@@ -168,6 +177,6 @@ def get_dataloader(data, args, train=True):
         shuffle=train,
         num_workers=n_jobs,
         drop_last=train,
-        pin_memory=True
-        # collate_fn=dataset.collate_fn
+        pin_memory=True,
+        collate_fn=collate_fn
     )

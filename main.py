@@ -31,6 +31,9 @@ def get_args():
         "--logdir", default="log", type=str, help="Directory for logging."
     )
     parser.add_argument(
+        "--data", default="doc", type=str, help="Directory for training/testing data."
+    )
+    parser.add_argument(
         "--ckptdir",
         default="ckpt",
         type=str,
@@ -101,10 +104,9 @@ if __name__ == "__main__":
         else torch.device("cuda:" + (args.gpu))
     )
 
-    # load pre-processed dataset
-    # run `bash script/get_data.sh` to get the file
-    with open(args.config["dataset"]["docs_sentence"], "rb") as f:
-        data = pk.load(f)
-
-    # start training
-    train(data, args)
+    if args.data == 'doc':
+        # start training
+        train(args)
+    elif args.data == 'fever':
+        from src.evaluation import predict
+        predict(args)

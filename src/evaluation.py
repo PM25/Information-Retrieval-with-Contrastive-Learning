@@ -1,5 +1,6 @@
 from tqdm import tqdm
-
+from src.model import load_model
+from src.dataset import get_dataloader
 import numpy as np
 import random
 import torch
@@ -47,3 +48,24 @@ def evaluate(dataloader, model):
 
     loss_avg = loss_sum / n_sample
     return loss_avg
+
+def predict(args):
+    assert not args.ckpt is None
+    _, model, _, _ = load_model(args.ckpt)
+    model = model.to(args.device)
+    fever_loader = get_dataloader(args, train=False)
+    with torch.no_grad():
+        for batch in tqdm(fever_loader, desc="Iteration"):
+            claim = [data['claim'] for data in  batch]
+            # claim = [data['evidences'][0]['document'][1] for data in  batch]
+            evdn = [data['evidences'][0]['document'][1] for data in  batch]
+            print(claim[0])
+            print(evdn[0])
+            
+            clm_vec = model.ctx2vec(claim, args.device)
+            evdn_vec = model.ctx2vec(evdn, args.device)
+            print((clm_vec * evdn_vec).sum(dim=-1).mean())
+            random.shuffle(evdn)
+            evdn_vec = model.ctx2vec(evdn, args.device)
+            print((clm_vec * evdn_vec).sum(dim=-1).mean())
+            print('----------------------------------')

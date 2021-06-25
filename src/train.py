@@ -38,7 +38,7 @@ def optimizer_to(optim, device):
                         subparam._grad.data = subparam._grad.data.to(device)
 
 
-def train(data, args):
+def train(args):
     # set initialization
     if args.ckpt is None:
         model = build_model(args)
@@ -59,9 +59,9 @@ def train(data, args):
     acml_batch_size = args.config["train"]["acml_batch_size"]
 
     # todo
-    train_loader = get_dataloader(data, args, train=True)
+    train_loader = get_dataloader(args, train=True)
     if args.loss in ["ProtoNCE", "HProtoNCE"]:
-        feat_loader = get_dataloader(data, args, train=False)
+        feat_loader = get_dataloader(args, train=False)
     cluster_result = None
 
     # build logger directory
@@ -146,7 +146,7 @@ def train(data, args):
                 )
                 loss.backward()
                 loss_sum += loss.item()
-
+                
                 if (
                     batch_size == acml_batch_size
                     or len(indexes) != args.config["train"]["batch_size"]
