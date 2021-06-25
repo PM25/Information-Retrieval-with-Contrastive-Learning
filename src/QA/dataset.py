@@ -12,6 +12,8 @@ from transformers import AutoTokenizer
 import torch
 from torch.utils.data import Dataset
 
+from elastic_search.search import batch_search
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
@@ -126,6 +128,86 @@ class FeverDatasetTokenize(Dataset):
                 max_length=512,
                 return_tensors="pt",
             )
+            datum["evidences"] = evidences
+            datum["input_ids"] = tokenize_data["input_ids"].flatten()
+            datum["attention_mask"] = tokenize_data["attention_mask"].flatten()
+
+        return data
+
+
+class EvaluationFeverDataset(Dataset):
+    def __init__(self, wiki_path, data_path, method="tf_idf"):
+        super().__init__()
+        self.wiki = process_wiki(wiki_path)
+        self.tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+        self.label_map = {"SUPPORTS": 1, "REFUTES": 0}
+        self.method = method
+
+        train_path = Path(data_path)
+        train_data = process_trainjsonl(train_path)
+
+        if self.method == "tf_idf":
+            claims = [datum["claim"] for datum in train_data]
+            num_batches = (len(claims) - 1) // 1000 + 1
+
+            retrieves = []
+            for i in tqdm(range(num_batches), desc="[Retrieve Evidences with TF-IDF]"):
+                batch = claims[i * 1000 : (i + 1) * 1000]
+                retrieves += batch_search(batch, count=15, max_threads=32)
+            assert len(retrieves) == len(claims)
+
+            for datum, evidences in zip(train_data, retrieves):
+                datum["pred_evidences"] = evidences
+
+        train_data = self.process(train_data)
+
+        self.data = []
+        for datum in train_data:
+            if datum["label"] == "NOT ENOUGH INFO":
+                continue
+
+            label = datum["label"]  # SUPPORTS, NOT VERIFIABLE, REFUTES
+
+            self.data.append(
+                {
+                    "id": datum["id"],
+                    "label": self.label_map[label],
+                    "claim": datum["claim"],
+                    "evidences": datum["evidences"],
+                    "input_ids": datum["input_ids"],
+                    "attention_mask": datum["attention_mask"],
+                }
+            )
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+    def process(self, data):
+        data = data.copy()
+        for datum in tqdm(data, desc="[Tokenizing Data]"):
+            claim = datum["claim"]
+            datum["original_evidences"] = datum["evidences"]
+
+            if self.method == "tf_idf":
+                process_evidences = []
+                for retrieve in datum["pred_evidences"]:
+                    process_evidences.append(retrieve["title"])
+                    process_evidences.append(retrieve["text"])
+                evidences = " ".join(process_evidences)
+
+            tokenize_data = self.tokenizer(
+                claim,
+                evidences,
+                padding="max_length",
+                truncation=True,
+                add_special_tokens=True,
+                max_length=512,
+                return_tensors="pt",
+            )
+
             datum["evidences"] = evidences
             datum["input_ids"] = tokenize_data["input_ids"].flatten()
             datum["attention_mask"] = tokenize_data["attention_mask"].flatten()

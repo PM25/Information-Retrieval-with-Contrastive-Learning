@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from transformers import logging
 
 from model import RoBertaClassifier
-from dataset import FeverDatasetTokenize
+from dataset import EvaluationFeverDataset
 from setting import get_device
 
 from sklearn.metrics import f1_score, accuracy_score, classification_report
@@ -45,7 +45,9 @@ if __name__ == "__main__":
     qa_model = torch.load(config["save"])
 
     # evaluation on dev data
-    test_dataset = FeverDatasetTokenize(data["small_wiki"], data["dev_data"])
+    test_dataset = EvaluationFeverDataset(
+        data["small_wiki"], data["dev_data"], method="tf_idf"
+    )
     test_loader = DataLoader(
         test_dataset,
         batch_size=config["eval"]["batch_size"],
