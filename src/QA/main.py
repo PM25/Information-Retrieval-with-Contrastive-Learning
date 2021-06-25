@@ -135,7 +135,7 @@ if __name__ == "__main__":
     )
 
     qa_model = train(RoBertaClassifier(config), train_loader, val_loader)
-    torch.save(qa_model, "models/qa.pth")
+    torch.save(qa_model, "src/QA/models/qa.pth")
 
     # evaluation on dev data
     test_dataset = FeverDatasetTokenize(
@@ -147,5 +147,5 @@ if __name__ == "__main__":
         num_workers=config["eval"]["n_jobs"],
     )
     report = evaluate(qa_model, test_loader)
-    print('[Dev Report]')
+    print("[Dev Report]")
     print(report)

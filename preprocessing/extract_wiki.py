@@ -55,13 +55,18 @@ def trainjsonl_documents(config):
     with open(fpath, "r", encoding="utf-8") as f:
         json_strs = f.readlines()
 
+    fpath = Path(config["dataset"]["data_dir"]) / "shared_task_dev.jsonl"
+    with open(fpath, "r", encoding="utf-8") as f:
+        json_strs += f.readlines()
+
     documents = set()
     for json_str in json_strs:
         dic = json.loads(json_str)
         for evidence_sets in dic["evidence"]:
             for evidence in evidence_sets:
                 if evidence[2] is not None:
-                    documents.add(evidence[2])
+                    doc_id = normalize("NFKD", evidence[2])
+                    documents.add(doc_id)
 
     return documents
 
