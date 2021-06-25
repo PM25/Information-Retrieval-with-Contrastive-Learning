@@ -17,11 +17,13 @@ from setting import set_random_seed, get_device
 
 from sklearn.metrics import f1_score, accuracy_score, classification_report
 
-with open("src/QA/qa_config.yaml", "r") as stream:
+with open("config.yaml", "r") as stream:
     config = yaml.safe_load(stream)
+    data = config["dataset"]
+    config = config["QA"]
 
-set_random_seed(config["others"]["seed"])
-torch_device = get_device(config["others"]["device_id"])
+set_random_seed(config["seed"])
+torch_device = get_device(config["device_id"])
 torch.cuda.empty_cache()
 logging.set_verbosity(logging.ERROR)
 
@@ -100,10 +102,9 @@ def evaluate(model, val_loader, report=False):
         val_loss.append(loss.item())
 
     if report:
-        val_acc = classification_report(truth, preds)
-    else:
-        val_acc = f1_score(truth, preds, average="macro")
+        return classification_report(truth, preds)
 
+    val_acc = f1_score(truth, preds, average="macro")
     val_loss = np.mean(val_loss)
 
     model.train()
@@ -112,15 +113,12 @@ def evaluate(model, val_loader, report=False):
 
 
 if __name__ == "__main__":
+    train_dataset = FeverDatasetTokenize(data["small_wiki"], data["train_data"])
 
-    dataset = FeverDatasetTokenize(
-        config["dataset"]["small_wiki"], config["dataset"]["train_data"]
-    )
+    val_size = int(len(train_dataset) * config["eval"]["size"])
+    train_size = len(train_dataset) - val_size
 
-    val_size = int(len(dataset) * config["eval"]["size"])
-    train_size = len(dataset) - val_size
-
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
 
     train_loader = DataLoader(
         train_dataset,
@@ -134,18 +132,17 @@ if __name__ == "__main__":
         num_workers=config["eval"]["n_jobs"],
     )
 
+    # Training Start
     qa_model = train(RoBertaClassifier(config), train_loader, val_loader)
-    torch.save(qa_model, "src/QA/models/qa.pth")
+    torch.save(qa_model, config["save"])
 
-    # evaluation on dev data
-    test_dataset = FeverDatasetTokenize(
-        config["dataset"]["small_wiki"], config["dataset"]["dev_data"]
-    )
+    # Evaluate on dev data
+    test_dataset = FeverDatasetTokenize(data["small_wiki"], data["dev_data"])
     test_loader = DataLoader(
         test_dataset,
         batch_size=config["eval"]["batch_size"],
         num_workers=config["eval"]["n_jobs"],
     )
-    report = evaluate(qa_model, test_loader)
+    report = evaluate(qa_model, test_loader, report=True)
     print("[Dev Report]")
     print(report)

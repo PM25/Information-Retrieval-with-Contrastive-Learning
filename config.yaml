@@ -84,12 +84,12 @@ optimizer:
 
     # Training options
 train:
-  batch_size: 128                                       # training batch size
-  acml_batch_size: 256                                  # sample
-  apex: False                                           # Use APEX (see https://github.com/NVIDIA/apex for more details)
-  total_steps: 100000                                   # total steps for training, a step is a batch of update
-  log_step: 1000                                         # evaluate model every this amount of training steps
-  n_jobs: 6
+    batch_size: 128                                       # training batch size
+    acml_batch_size: 256                                  # sample
+    apex: False                                           # Use APEX (see https://github.com/NVIDIA/apex for more details)
+    total_steps: 100000                                   # total steps for training, a step is a batch of update
+    log_step: 1000                                         # evaluate model every this amount of training steps
+    n_jobs: 6
 
 # Evaluation options
 eval:
@@ -97,9 +97,42 @@ eval:
     n_jobs: 3
 
 dataset:
-    data_dir: data/fever/
-    small_wiki: data/small_wiki.json
-    docs_sentence: data/fever/docs_sentence.pkl
-    full_wiki: data/full_wiki.json
-    full_docs_sentence: data/fever/full_docs_sentence.pkl
-    full_docs_sentence_similarity: data/fever/full_docs_sentence_similarity.pkl
+    data_dir: /tmp2/py/data/fever/
+    train_data: /tmp2/py/data/fever/train.jsonl
+    dev_data: /tmp2/py/data/fever/shared_task_dev.jsonl
+    small_wiki: /tmp2/py/data/small_wiki.json
+    full_wiki: /tmp2/py/data/full_wiki.json
+    docs_sentence: /tmp2/py/data/fever/docs_sentence.pkl
+    full_docs_sentence: /tmp2/py/data/fever/full_docs_sentence.pkl
+    full_docs_sentence_similarity: /tmp2/py/data/fever/full_docs_sentence_similarity.pkl
+
+elastic_search:
+    index: wiki
+    num_threads: 32
+    port: 2021
+
+QA:
+  optimizer:
+    Adam:
+        learning_rate: 1e-5
+    warmup_steps: 5000
+
+  # Training options
+  train:
+      epochs: 3
+      log_step: 1
+      batch_size: 8 # training batch size
+      n_jobs: 30
+      freeze_bert: False
+
+  # Evaluation options
+  eval:
+      batch_size: 8 # used for dev/test splits
+      n_jobs: 30
+      size: 0.01 # validation data portion
+
+  save: src/QA/models/qa.pth
+  seed: 1009
+  device_id: 0 # cpu: -1, gpu > 0
+    
+    
