@@ -1,8 +1,11 @@
 import yaml
+import shutil
+import tarfile
 import requests
 from tqdm import tqdm
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
+
 
 def download_file(url, store_folder="data"):
     fname = Path(url).name
@@ -27,22 +30,23 @@ def download_file(url, store_folder="data"):
 if __name__ == "__main__":
     with open("config.yaml", "r") as stream:
         config = yaml.safe_load(stream)
-        
+
     # links (from https://fever.ai/data.html)
     links = {
         "Pre_processed_Wikipedia_Pages": "https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip",
         "Training_Dataset": "https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl",
         "Shared_Task_Development_Dataset_Labelled": "https://s3-eu-west-1.amazonaws.com/fever.public/shared_task_dev.jsonl",
+        "Elastic_Search": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.13.2-linux-x86_64.tar.gz",
     }
 
     for name, url in links.items():
         fname = Path(url).name
-        data_path = Path(config['dataset']["data_dir"]) / fname
+        data_path = Path(config["dataset"]["data_dir"]) / fname
 
         if data_path.is_file():
             print(f"*skip download file '{name}': already exists in {data_path}")
         else:
-            download_file(url, config['dataset']["data_dir"])
+            download_file(url, config["dataset"]["data_dir"])
 
         # if it's a zip file then unzip it
         if is_zipfile(data_path):
@@ -51,4 +55,16 @@ if __name__ == "__main__":
                 for file in tqdm(
                     iterable=zfile.namelist(), total=len(zfile.namelist())
                 ):
-                    zfile.extract(member=file, path=Path(config['dataset']["data_dir"]))
+                    zfile.extract(member=file, path=Path(config["dataset"]["data_dir"]))
+
+        elif data_path.name.endswith("tar.gz"):
+            print(f"[Unzipping] {fname}")
+            tar = tarfile.open(data_path, "r:gz")
+            tar.extractall(config["dataset"]["data_dir"])
+            tar.close()
+
+        elif data_path.name.endswith("tar"):
+            print(f"[Unzipping] {fname}")
+            tar = tarfile.open(data_path, "r:")
+            tar.extractall(config["dataset"]["data_dir"])
+            tar.close()
