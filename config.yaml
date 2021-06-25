@@ -109,7 +109,7 @@ dataset:
 elastic_search:
     index: wiki
     num_threads: 32
-    port: 2021
+    port: 1234
 
 QA:
   optimizer:
