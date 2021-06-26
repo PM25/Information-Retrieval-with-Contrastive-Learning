@@ -136,25 +136,23 @@ class FeverDatasetTokenize(Dataset):
 
 
 class EvaluationFeverDataset(Dataset):
-    def __init__(self, wiki_path, data_path, method="tf_idf"):
+    def __init__(self, wiki_path, data_path, method="tf_idf", max_evidences=10):
         super().__init__()
         self.wiki = process_wiki(wiki_path)
         self.tokenizer = AutoTokenizer.from_pretrained("roberta-base")
         self.label_map = {"SUPPORTS": 1, "REFUTES": 0}
         self.method = method
+        self.max_evidences = max_evidences
 
         train_path = Path(data_path)
         train_data = process_trainjsonl(train_path)
+        train_data = [
+            datum for datum in train_data if datum["label"] != "NOT ENOUGH INFO"
+        ]
 
         if self.method == "tf_idf":
             claims = [datum["claim"] for datum in train_data]
-            num_batches = (len(claims) - 1) // 1000 + 1
-
-            retrieves = []
-            for i in tqdm(range(num_batches), desc="[Retrieve Evidences with TF-IDF]"):
-                batch = claims[i * 1000 : (i + 1) * 1000]
-                retrieves += batch_search(batch, count=15, max_threads=32)
-            assert len(retrieves) == len(claims)
+            retrieves = batch_search(claims, count=self.max_evidences, max_threads=32)
 
             for datum, evidences in zip(train_data, retrieves):
                 datum["pred_evidences"] = evidences
@@ -163,9 +161,6 @@ class EvaluationFeverDataset(Dataset):
 
         self.data = []
         for datum in train_data:
-            if datum["label"] == "NOT ENOUGH INFO":
-                continue
-
             label = datum["label"]  # SUPPORTS, NOT VERIFIABLE, REFUTES
 
             self.data.append(
@@ -192,11 +187,9 @@ class EvaluationFeverDataset(Dataset):
             datum["original_evidences"] = datum["evidences"]
 
             if self.method == "tf_idf":
-                process_evidences = []
-                for retrieve in datum["pred_evidences"]:
-                    process_evidences.append(retrieve["title"])
-                    process_evidences.append(retrieve["text"])
-                evidences = " ".join(process_evidences)
+                evidences = self.process_tf_idf(datum["pred_evidences"])
+            elif self.method == "uniform":
+                evidences = self.uniform_sample(k=self.max_evidences)
 
             tokenize_data = self.tokenizer(
                 claim,
@@ -213,3 +206,36 @@ class EvaluationFeverDataset(Dataset):
             datum["attention_mask"] = tokenize_data["attention_mask"].flatten()
 
         return data
+
+    def process_tf_idf(self, evidences):
+        evidences = {}
+        for _id, retrieve in evidences:
+            title = retrieve["title"]
+            _id = eval(_id.split("_")[1])
+            sent = (_id, retrieve["text"])
+            evidences[title] = evidences.get(title, []) + [sent]
+
+        process_evidences = []
+        for doc_id, sent_ids in evidences.items():
+            process_evidences.append(doc_id)
+            for _id, sent in sorted(sent_ids, key=lambda x: x[0]):
+                process_evidences.append(sent)
+
+        evidences = " ".join(process_evidences)
+
+        return evidences
+
+    def uniform_sample(self, k=10):
+        sents = []
+        count = 0
+        while count < k:
+            doc_id = random.choice(list(self.wiki))
+            lines = self.wiki[doc_id]["lines"]
+
+            doc_id = doc_id.replace("_", " ")
+            sents.append(doc_id)
+            lines = random.sample(lines, k=random.randint(1, len(lines)))
+            sents.extend(lines)
+            count += len(lines)
+
+        return " ".join(sents[:count])

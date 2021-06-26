@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     # evaluation on dev data
     test_dataset = EvaluationFeverDataset(
-        data["small_wiki"], data["dev_data"], method="tf_idf"
+        data["small_wiki"], data["dev_data"], method="uniform"
     )
     test_loader = DataLoader(
         test_dataset,

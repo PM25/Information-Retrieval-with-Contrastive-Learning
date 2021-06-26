@@ -42,7 +42,9 @@ def search(query, method="multi_match", count=10):
     return [doc["_source"] for doc in res["hits"]["hits"]]
 
 
-def batch_search(queries, method="multi_match", count=10, max_threads=10):
+def multi_search(
+    queries, method="multi_match", count=10, max_threads=10, include_id=True
+):
     search_method = _methods[method]
 
     body_request = []
@@ -65,11 +67,30 @@ def batch_search(queries, method="multi_match", count=10, max_threads=10):
 
     out = []
     for r in res["responses"]:
-        out.append([doc["_source"] for doc in r["hits"]["hits"]])
+        if include_id:
+            out.append([(doc["_id"], doc["_source"]) for doc in r["hits"]["hits"]])
+        else:
+            out.append([doc["_source"] for doc in r["hits"]["hits"]])
 
     assert len(out) == len(queries)
 
     return out
+
+
+def batch_search(
+    queries, count=10, method="multi_match", batch_size=1000, max_threads=10
+):
+    num_batches = (len(queries) - 1) // batch_size + 1
+
+    retrieves = []
+    for i in tqdm(range(num_batches), desc="[Batch Search Documents]"):
+        batch = queries[i * batch_size : (i + 1) * batch_size]
+        retrieves += multi_search(
+            batch, count=count, method=method, max_threads=max_threads
+        )
+    assert len(retrieves) == len(queries)
+
+    return retrieves
 
 
 def search_title(query, method="multi_match", count=10):
