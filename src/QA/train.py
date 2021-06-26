@@ -69,9 +69,9 @@ def train(model, train_loader, val_loader=None, config=config):
                 tqdm_train_loader.set_description(
                     f"[Epoch:{epoch:03}] Train Loss: {train_loss:.3f} | Val Loss: {val_loss:.3f} | Val F1: {val_acc:.3f}",
                 )
-                writer.add_scalar("Risk_Accuracy/valalidation", val_acc, epoch)
-                writer.add_scalar("Risk_Loss/validation", val_loss, epoch)
-                writer.add_scalar("Risk_Loss/train", train_loss, epoch)
+                writer.add_scalar("eval/Accuracy", val_acc, epoch)
+                writer.add_scalar("eval/Loss", val_loss, epoch)
+                writer.add_scalar("train/Loss", train_loss, epoch)
 
             elif step % config["train"]["log_step"] == 0:
                 avg_loss /= config["train"]["log_step"]

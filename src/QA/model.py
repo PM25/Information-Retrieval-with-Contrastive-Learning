@@ -33,7 +33,7 @@ class RoBertaClassifier(nn.Module):
         if answer is not None:
             loss = F.cross_entropy(logits, answer)
             return torch.argmax(logits, axis=1), loss
-
+        
         return torch.argmax(logits, axis=1)
 
 
