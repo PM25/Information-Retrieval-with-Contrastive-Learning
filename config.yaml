@@ -95,6 +95,7 @@ train:
 eval:
     batch_size: 128 # used for dev/test splits
     n_jobs: 3
+    output_file: prediction.json
 
 dataset:
     data_dir: /tmp2/cllab/chu/IR/final/data/fever/
@@ -109,6 +110,9 @@ dataset:
     full_docs_sentence_similarity: /tmp2/cllab/chu/IR/final/data/fever/full_docs_sentence_similarity.pkl
     inverted_file: /tmp2/cllab/chu/IR/final/data/index/count_matrix.npz
     tfidf: /tmp2/cllab/chu/IR/final/data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz
+    tfidf_retrieve: /tmp2/cllab/chu/IR/final/data/fever/tfidf_retrieve.json
+    sent2embedding_dict: /tmp2/cllab/chu/IR/final/data/sent2embedding_dict.pkl
+    ground_truth_embedding_dict: /tmp2/cllab/chu/IR/final/data/ground_truth_embedding_dict.pkl
 
 elastic_search:
     index: wiki

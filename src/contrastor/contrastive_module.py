@@ -95,7 +95,8 @@ class RetrievalModelWrapper(nn.Module):
 
     def ctx2vec(self, context, device):
         t = self.bert_tokenizer(context, padding=True, truncation=True, return_tensors='pt')
-        output = self.bert_model(input_ids=t['input_ids'].to(device), attention_mask=t['attention_mask'].to(device))
+        with torch.no_grad():
+            output = self.bert_model(input_ids=t['input_ids'].to(device), attention_mask=t['attention_mask'].to(device))
         output = output.last_hidden_state
         return self.seq2vec(output)
 

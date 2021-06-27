@@ -4,11 +4,14 @@ import time
 import torch
 import random
 import argparse
+import json
 import numpy as np
 import _pickle as pk
 
 from src.train import train
-from src.dataset import get_dataloader
+from src.evaluation import predict, documents_filtering, load_total_docs, get_cos_similarity
+from src.dataset import get_dataloader, FeverDataset
+
 
 
 def get_args():
@@ -78,6 +81,13 @@ def get_args():
         choices=["uniform", "tf_idf"],
         help="Sampling methods",
     )
+    parser.add_argument(
+        "--mode",
+        default="cos_sim",
+        type=str,
+        choices=["train", "predict", "cos_sim"],
+        help="Choosing different modes",
+    )
 
     # get parsing results
     args = parser.parse_args()
@@ -104,9 +114,12 @@ if __name__ == "__main__":
         else torch.device("cuda:" + (args.gpu))
     )
 
-    if args.data == 'doc':
+    if args.mode == 'train':
         # start training
         train(args)
-    elif args.data == 'fever':
-        from src.evaluation import predict
-        predict(args)
+    elif args.mode == 'predict':
+        with open(args.config["dataset"]["tfidf_retrieve"], 'r') as f:
+            data = json.load(f)
+        predict(args, data)
+    elif args.mode == "cos_sim":
+        get_cos_similarity(args)

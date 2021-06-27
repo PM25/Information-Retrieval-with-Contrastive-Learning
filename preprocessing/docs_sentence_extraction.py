@@ -15,19 +15,22 @@ def sub(m):
         if m.group() in {"-LRB-", "-RRB-", "-LSB-", "-RSB-", "''", "``", "--"}
         else m.group()
     )
+def sentence_cleaning(sent):
+    return re.sub(r"[^ ]+", sub, sent)
 
-def sentence_extraction(text):
+
+def sentence_extraction(text, limit=2):
         # get the number of sentences in the document
     length = text[-3:].strip()
     if not length.isdigit():
         return None
 
     length = int(length)
-    if length <= 2:
+    if length <= limit:
         return None
 
     # remove the above redundancy words
-    lines = re.sub(r"[^ ]+", sub, text)
+    lines = sentence_cleaning(text) 
 
     doc = []
     for i in range(length):
@@ -51,7 +54,7 @@ def sentence_extraction(text):
             continue
         doc.append(s)
 
-    if len(doc) <= 2:
+    if len(doc) <= limit:
         return None
     return doc
 

@@ -17,6 +17,8 @@ from torch.utils.data import Dataset
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from preprocessing.docs_sentence_extraction import sentence_cleaning
+
 
 def process_wiki(fname):
     with open(fname, "r") as f:
@@ -102,11 +104,8 @@ class DocDataset(Dataset):
 
 
 class FeverDataset(Dataset):
-    def __init__(self, args):
+    def __init__(self, wiki_path, fever_path):
         super().__init__()
-        wiki_path = args.config['dataset']['small_wiki']
-        fever_path = args.config['dataset']['dev_data']
-
         self.wiki = process_wiki(wiki_path)
 
         fever_data = process_jsonl(fever_path)
@@ -150,8 +149,18 @@ class FeverDataset(Dataset):
                     }
                 )
             datum["evidences"] = process_evidences
-
         return data
+
+    def parsing(self):
+        for d in self.data:
+            evidences = {}
+            for doc in d["evidences"]:
+                evidences[doc["title"]] = []
+                sent_idx = np.unique(doc["sent_idx"])
+                for idx in sent_idx:
+                    lines = sentence_cleaning(doc["document"][idx])
+                    evidences[doc["title"]].append((idx, lines))
+            d["evidences"] = evidences
 
     def collate_fn(self, data):
         return data
@@ -168,7 +177,7 @@ def get_dataloader(args, train=True):
         dataset = DocDataset(args)
         collate_fn = None
     elif args.data == 'fever':
-        dataset = FeverDataset(args)
+        dataset = FeverDataset(args.config["dataset"]["small_wiki"], args.config["dataset"]["dev_data"])
         collate_fn = dataset.collate_fn
 
     return torch.utils.data.DataLoader(
