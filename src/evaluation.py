@@ -218,10 +218,12 @@ def get_cos_similarity(args):
         with torch.no_grad():
             claim_vec = model.ctx2vec(d["claim"], args.device).detach_().cpu().numpy().squeeze()
 
+        all_sents_vec = []
         for title, contents in d["evidences"].items():
             contents = [c for i, c in contents]
-            sents_vec = np.array([ground_truth_embedding_dict[sent] for sent in contents]).reshape(len(contents), -1)
-        score = np.einsum('j,kj->k', claim_vec, sents_vec).mean()
+            all_sents_vec.append(np.array([ground_truth_embedding_dict[sent] for sent in contents]).reshape(len(contents), -1))
+        all_sents_vec = np.concatenate(all_sents_vec, axis=0)
+        score = np.einsum('j,kj->k', claim_vec, all_sents_vec).mean()
         total_scores += score
     print('average cos similarity score: %.4f' % (total_scores / len(dataset)))
 
